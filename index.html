@@ -65,8 +65,9 @@ Copyright (c) 2015 Daniel Eden
 .home-banners a.is-on{display:block}
 .home-banners img{display:block;width:100%;height:auto;border-radius:12px}
 .home-banner-dots{display:flex;justify-content:center;align-items:center;gap:16px;height:42px;margin:0;background:#f4f4f4;background-image:linear-gradient(135deg,#e8e8e8 25%,transparent 25%),linear-gradient(225deg,#e8e8e8 25%,transparent 25%),linear-gradient(45deg,#e8e8e8 25%,transparent 25%),linear-gradient(315deg,#e8e8e8 25%,#f4f4f4 25%);background-size:18px 18px;background-position:0 0,0 9px,9px -9px,-9px 0;border-bottom:5px solid #268726}
-.home-banner-dots button{width:16px;height:16px;padding:0;border:0;border-radius:50%;background:#c8c8c8;cursor:pointer}
-.home-banner-dots button.is-on{background:#3a3a3a}
+.home-banner-dots button{position:relative;width:20px;height:20px;padding:0;border:0;background:transparent;color:transparent;font-size:0;line-height:0;cursor:pointer}
+.home-banner-dots button::before{content:"";position:absolute;top:0;left:0;width:20px;height:20px;border-radius:100%;background:#000;opacity:.25;border:3px solid rgba(255,255,255,.5);box-sizing:border-box}
+.home-banner-dots button.is-on::before{opacity:.75}
 .center_frame .banner.slick-slider{display:none!important}
 @media (max-width:1199px){
   .center_frame,body .center_frame{max-height:none!important;height:auto!important;overflow:visible!important}
@@ -962,6 +963,8 @@ document.querySelectorAll('#myTab [data-toggle="tab"]').forEach(function (link) 
   slides.forEach(function (_, number) {
     var button = document.createElement('button');
     button.type = 'button';
+    button.className = 'slickbut';
+    button.textContent = String(number + 1);
     button.setAttribute('aria-label', '第 ' + (number + 1) + ' 張');
     button.addEventListener('click', function () { show(number); restart(); });
     dots.appendChild(button);

@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>網站內容後台</title>
+  <link rel="stylesheet" href="/staff/content-admin.css">
+</head>
+<body>
+  <header class="top">
+    <div>
+      <p class="eyebrow">內政部警政署刑事警察局</p>
+      <h1>網站內容後台</h1>
+    </div>
+    <div class="top-actions">
+      <span id="who"></span>
+      <a href="/">看網站</a>
+      <button id="logoutButton" type="button" class="hidden">登出</button>
+    </div>
+  </header>
+  <p id="status" class="status" role="status"></p>
+  <main>
+    <section id="loginPanel" class="card">
+      <h2>管理員登入</h2>
+      <p>使用案件管理的管理員帳號。這個頁面可改民眾看到的聯絡資料、新聞和主頁橫幅。</p>
+      <form id="loginForm">
+        <label>帳號<input id="username" name="username" autocomplete="username" required></label>
+        <label>密碼<input id="password" name="password" type="password" autocomplete="current-password" required></label>
+        <button type="submit">登入</button>
+      </form>
+    </section>
+    <div id="workspace" class="hidden">
+      <form id="contactForm" class="card">
+        <h2>聯絡資料</h2>
+        <label>地址<textarea id="address" required></textarea></label>
+        <label>地圖連結<span>可留空，留空時用地圖搜尋這個地址</span><input id="mapUrl" type="url" placeholder="https://"></label>
+        <label>服務電話<input id="servicePhone" required></label>
+        <label>檢舉電話<input id="reportPhonePrimary" required></label>
+        <label>第二支檢舉電話<input id="reportPhoneSecondary"></label>
+        <h2>各單位信箱</h2>
+        <div id="unitEmails" class="units"></div>
+        <button type="submit">儲存聯絡資料</button>
+      </form>
+      <form id="posterForm" class="card">
+        <h2>主頁橫幅</h2>
+        <p>上傳、刪除、換圖和調整順序後，按一次儲存，主頁會立刻整組更新。至少要留一張。圖片會完整顯示，橫幅高度跟著每一張改變。</p>
+        <ol id="posterList" class="poster-list"></ol>
+        <label>新增圖片<input id="posterFiles" type="file" accept="image/jpeg,image/png,image/webp,image/gif" multiple></label>
+        <input id="posterReplace" type="file" accept="image/jpeg,image/png,image/webp,image/gif" class="hidden">
+        <button type="submit">儲存橫幅</button>
+      </form>
+      <form id="footerQrForm" class="card">
+        <h2>頁尾二維碼</h2>
+        <p>換圖後按儲存，每一頁頁尾最下方會立刻更新。警察局標誌跟頁首相同，不能在這裡更換。</p>
+        <img id="footerQrPreview" alt="頁尾二維碼" style="width:140px;height:auto;background:#fff">
+        <label>更換圖片<input id="footerQrFile" type="file" accept="image/jpeg,image/png,image/webp,image/gif"></label>
+        <button type="submit">儲存二維碼</button>
+      </form>
+      <section class="card">
+        <h2>新聞</h2>
+        <p>每類最前面 4 則出現在首頁，其餘依順序排在該分類列表後面。用上移、下移調整。</p>
+        <div id="newsBoard" class="news-board"></div>
+      </section>
+    </div>
+  </main>
+  <dialog id="editor">
+    <form id="newsForm">
+      <h2 id="editorTitle">新增新聞</h2>
+      <label>分類<select id="newsCategory"><option value="breaking">破案快訊</option><option value="clarification">即時新聞澄清</option><option value="notice">公告事項</option><option value="crime">最新犯罪手法</option></select></label>
+      <label>標題<input id="newsTitle" required></label>
+      <div class="split">
+        <label>發布日期<input id="newsPublished" required placeholder="115-10-28"></label>
+        <label>更新日期<input id="newsUpdated" placeholder="115-10-28"></label>
+      </div>
+      <label>發布單位<input id="newsPublisher" required></label>
+      <label>內文<textarea id="newsBody" rows="10"></textarea></label>
+      <div id="newsImages" class="images"></div>
+      <label>上傳照片<input id="newsPhotos" type="file" accept="image/jpeg,image/png,image/webp,image/gif" multiple></label>
+      <div class="dialog-actions">
+        <button type="button" id="closeEditor" class="secondary">取消</button>
+        <button type="submit">儲存新聞</button>
+      </div>
+    </form>
+  </dialog>
+  <script src="/staff/content-admin.js"></script>
+</body>
+</html>

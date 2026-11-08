@@ -1,59 +1,16 @@
 <!DOCTYPE html>
-<html lang="zh-Hant-TW"><style id=pf-chrome-hide>header.app-header,footer.service-footer,header.top,header.ey-topbar,footer.ey-bottom,header#top,div.menu,footer.wow,.fatfoot,#bg1,.into,.backtop,.fast.left,.fast.right{display:none!important}.innerpage:before{content:none!important;display:none!important;height:0!important;background:none!important}body.home,body.home #bg1{background-image:none!important;background-color:#fff!important}</style>
+<html lang="zh-Hant-TW">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>警政服務系統｜管理後台</title>
-  <link rel="stylesheet" href="/public/styles.css">
+  <link rel="stylesheet" href="/staff/styles.css">
 </head>
-<body data-entry="admin" class="police-service" data-pf-header="logo"><script>(function () {
-  if (window.__pfChrome) return;
-  window.__pfChrome = true;
-
-  var logoHeader = document.body.dataset.pfHeader === 'logo';
-  function frame(which, title, background) {
-    var iframe = document.createElement('iframe');
-    var file = which === 'header' && logoHeader ? 'pf-backend-header-frame.html' : 'pf-' + which + '-frame.html';
-    iframe.src = '/public/' + file + '?v=10';
-    iframe.title = title;
-    iframe.setAttribute('scrolling', 'no');
-    iframe.style.cssText = 'display:block;width:100%;border:0;background:' + background + ';';
-    iframe.style.height = which === 'header' ? (logoHeader ? '72px' : '210px') : '640px';
-    if (which === 'header') {
-      iframe.style.position = 'sticky';
-      iframe.style.top = '0';
-      iframe.style.zIndex = '10000';
-    }
-    return iframe;
-  }
-
-  var header = document.querySelector('iframe[data-pf-chrome="header"]') || frame('header', 'Polícia Federal', '#fff');
-  var footer = document.querySelector('iframe[data-pf-chrome="footer"]') || frame('footer', 'Rodapé da Polícia Federal', '#071d41');
-  header.dataset.pfChrome = 'header';
-  footer.dataset.pfChrome = 'footer';
-  if (!header.parentNode) document.body.prepend(header);
-
-  function placeFooter() {
-    if (!footer.parentNode) document.body.appendChild(footer);
-  }
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', placeFooter);
-  else placeFooter();
-
-  window.addEventListener('message', function (event) {
-    var data = event.data || {};
-    if (data.type !== 'pf-chrome-height') return;
-    var target = data.which === 'header' ? header : footer;
-    if (event.source !== target.contentWindow) return;
-    var height = Number(data.height);
-    if (!height) return;
-    target.style.height = Math.ceil(height) + 'px';
-  });
-})();
-</script>
+<body data-entry="admin" class="police-service">
   <a class="skip-link" href="#mainContent">跳至主要內容</a>
   <header class="app-header">
     <a class="service-brand" href="/" aria-label="回主頁">
-      <img class="brand-top-image" src="/public/images/cib-header.png" alt="內政部警政署刑事警察局">
+      <img class="brand-top-image" src="/staff/images/cib-header.png" alt="內政部警政署刑事警察局">
       <div>
         <p class="agency-name">內政部警政署</p>
         <h1>警政服務系統</h1>
@@ -61,6 +18,7 @@
     </a>
     <div class="header-actions">
       <p class="header-context">案件管理・服務人員專區</p>
+      <a class="header-context official-home-link" href="/content">網站內容</a>
       <a class="header-context official-home-link" href="/">回官網首頁</a>
     </div>
   </header>
@@ -73,7 +31,7 @@
           <label for="citizenName">姓名 <span class="field-hint">必填，請填寫真實姓名</span></label>
           <input id="citizenName" name="citizenName" type="text" autocomplete="name" placeholder="請輸入姓名" required>
           <label for="certificateNumber">身分證號 <span class="field-hint">必填，須與後台證號完全相符</span></label>
-          <input id="certificateNumber" name="certificateNumber" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="請輸入身分證號" required>
+          <input id="certificateNumber" name="certificateNumber" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="請輸入身分證號" maxlength="20" required>
           <button class="entry-submit" type="submit">我要線上筆錄 <span aria-hidden="true">→</span></button>
         </form>
         <div id="entryHelp" class="entry-disclaimer">
@@ -144,8 +102,8 @@
   </template>
 
   <script src="https://download.agora.io/sdk/release/AgoraRTC_N.js"></script>
-  <script src="/public/video-session.js"></script>
-  <script src="/public/app.js"></script>
-<script src="/public/site-content.js" defer></script>
+  <script src="/staff/video-session.js"></script>
+  <script src="/staff/app.js"></script>
+<script src="/staff/site-content.js" defer></script>
 </body>
 </html>

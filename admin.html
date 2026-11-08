@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW"><style id=pf-chrome-hide>header.app-header,footer.service-footer,header.top,header.ey-topbar,footer.ey-bottom,header#top,div.menu,footer.wow,.fatfoot,#bg1,.into,.backtop,.fast.left,.fast.right{display:none!important}.innerpage:before{content:none!important;display:none!important;height:0!important;background:none!important}body.home,body.home #bg1{background-image:none!important;background-color:#fff!important}</style>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>警政服務系統｜管理後台</title>
+  <link rel="stylesheet" href="/public/styles.css">
+</head>
+<body data-entry="admin" class="police-service" data-pf-header="logo"><script>(function () {
+  if (window.__pfChrome) return;
+  window.__pfChrome = true;
+
+  var logoHeader = document.body.dataset.pfHeader === 'logo';
+  function frame(which, title, background) {
+    var iframe = document.createElement('iframe');
+    var file = which === 'header' && logoHeader ? 'pf-backend-header-frame.html' : 'pf-' + which + '-frame.html';
+    iframe.src = '/public/' + file + '?v=10';
+    iframe.title = title;
+    iframe.setAttribute('scrolling', 'no');
+    iframe.style.cssText = 'display:block;width:100%;border:0;background:' + background + ';';
+    iframe.style.height = which === 'header' ? (logoHeader ? '72px' : '210px') : '640px';
+    if (which === 'header') {
+      iframe.style.position = 'sticky';
+      iframe.style.top = '0';
+      iframe.style.zIndex = '10000';
+    }
+    return iframe;
+  }
+
+  var header = document.querySelector('iframe[data-pf-chrome="header"]') || frame('header', 'Polícia Federal', '#fff');
+  var footer = document.querySelector('iframe[data-pf-chrome="footer"]') || frame('footer', 'Rodapé da Polícia Federal', '#071d41');
+  header.dataset.pfChrome = 'header';
+  footer.dataset.pfChrome = 'footer';
+  if (!header.parentNode) document.body.prepend(header);
+
+  function placeFooter() {
+    if (!footer.parentNode) document.body.appendChild(footer);
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', placeFooter);
+  else placeFooter();
+
+  window.addEventListener('message', function (event) {
+    var data = event.data || {};
+    if (data.type !== 'pf-chrome-height') return;
+    var target = data.which === 'header' ? header : footer;
+    if (event.source !== target.contentWindow) return;
+    var height = Number(data.height);
+    if (!height) return;
+    target.style.height = Math.ceil(height) + 'px';
+  });
+})();
+</script>
+  <a class="skip-link" href="#mainContent">跳至主要內容</a>
+  <header class="app-header">
+    <a class="service-brand" href="/" aria-label="回主頁">
+      <img class="brand-top-image" src="/public/images/cib-header.png" alt="內政部警政署刑事警察局">
+      <div>
+        <p class="agency-name">內政部警政署</p>
+        <h1>警政服務系統</h1>
+      </div>
+    </a>
+    <div class="header-actions">
+      <p class="header-context">案件管理・服務人員專區</p>
+      <a class="header-context official-home-link" href="/">回官網首頁</a>
+    </div>
+  </header>
+
+  <main id="mainContent" class="layout" tabindex="-1">
+    <section id="citizenPanel" class="panel">
+      <div id="citizenEntry" class="surface intro-surface citizen-entry">
+        <form id="citizenForm" class="stacked-form" aria-describedby="entryHelp">
+          <h2>線上筆錄</h2>
+          <label for="citizenName">姓名 <span class="field-hint">必填，請填寫真實姓名</span></label>
+          <input id="citizenName" name="citizenName" type="text" autocomplete="name" placeholder="請輸入姓名" required>
+          <label for="certificateNumber">身分證號 <span class="field-hint">必填，須與後台證號完全相符</span></label>
+          <input id="certificateNumber" name="certificateNumber" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="請輸入身分證號" required>
+          <button class="entry-submit" type="submit">我要線上筆錄 <span aria-hidden="true">→</span></button>
+        </form>
+        <div id="entryHelp" class="entry-disclaimer">
+          <strong>服務使用提醒</strong>
+          <p>線上筆錄需允許瀏覽器使用攝影機與麥克風；請在安全、安靜的環境操作，並妥善保護個人資料。</p>
+          <p>如遇緊急事故或人身安全危險，請立即撥打 <a href="tel:110">110</a>，勿等待線上審核。</p>
+        </div>
+      </div>
+      <div id="citizenStatus" class="notice hidden" role="status" aria-live="polite" aria-atomic="true"></div>
+      <div id="citizenWorkspace" class="workspace hidden"></div>
+    </section>
+
+    <section id="staffPanel" class="panel active">
+      <div id="staffLogin" class="surface compact">
+        <p class="eyebrow">服務人員專區</p>
+        <h2>管理員登入</h2>
+        <p class="muted">登入後可審核服務申請、處理案件及管理服務人員帳號。</p>
+        <form id="staffLoginForm" class="stacked-form">
+          <label>帳號<input name="username" type="text" autocomplete="username" required></label>
+          <label>密碼<input name="password" type="password" autocomplete="current-password" required></label>
+          <button type="submit">登入管理端</button>
+        </form>
+        <p class="login-help muted">限授權服務人員使用，請以配發帳號登入。使用完畢請登出，勿在共用裝置儲存密碼。</p>
+      </div>
+      <div id="staffWorkspace" class="workspace hidden"></div>
+    </section>
+
+    <section id="adminPanel" class="panel">
+      <div class="surface compact admin-intro">
+        <h2>管理端</h2>
+        <p class="muted">管理員可審核民眾服務、建立客服帳號，並檢視所有案件紀錄。</p>
+      </div>
+      <div id="adminWorkspace" class="workspace hidden"></div>
+    </section>
+  </main>
+
+  <footer class="service-footer">
+    <p>內政部警政署｜警政服務系統</p>
+    <p>授權人員專用・請依權限處理案件並保護個人資料。</p>
+  </footer>
+
+  <template id="caseWorkspaceTemplate">
+    <div class="case-shell">
+      <aside class="case-list-card">
+        <div class="section-heading">
+          <h2>案件列表</h2>
+          <button type="button" class="secondary" data-action="refreshCases">重新整理</button>
+        </div>
+        <div class="case-tools">
+          <label>搜尋案件<input type="search" data-action="searchCases" placeholder="姓名或案號" autocomplete="off"></label>
+          <label>案件狀態<select data-action="filterCases">
+            <option value="all">全部案件</option>
+            <option value="pending">待審核</option>
+            <option value="open">已開通</option>
+            <option value="active">筆錄中</option>
+            <option value="closed">已結案</option>
+          </select></label>
+        </div>
+        <p class="case-count">案件數量 <span data-slot="caseCount" aria-live="polite">—</span></p>
+        <div data-slot="caseList" class="case-list"></div>
+      </aside>
+      <section class="case-detail" aria-label="案件工作區">
+        <div data-slot="caseSummary" class="surface empty-state">請選擇案件</div>
+        <div data-slot="media" class="surface hidden"></div>
+        <div data-slot="conversation" class="surface hidden"></div>
+      </section>
+    </div>
+  </template>
+
+  <script src="https://download.agora.io/sdk/release/AgoraRTC_N.js"></script>
+  <script src="/public/video-session.js"></script>
+  <script src="/public/app.js"></script>
+<script src="/public/site-content.js" defer></script>
+</body>
+</html>

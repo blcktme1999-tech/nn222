@@ -8,7 +8,8 @@ const state = {
   videoSession: null, mediaError: '', mediaPending: false,
   conversation: null, viewVersion: 0, caseRevision: 0,
   workflow: Promise.resolve(), caseLoad: null,
-  casePollTimer: null, messagePollTimer: null
+  casePollTimer: null, messagePollTimer: null,
+  interviewLocked: false, leavingInterview: false
 };
 const MAX_UPLOAD_BYTES = 3 * 1024 * 1024;
 // Controller failures also reject public operations. Do not cache those rejects
@@ -611,7 +612,7 @@ function getVideoSession() {
         requireOpenRoot(caseId, state.callRoot);
         return api(casePath(caseId, '/agora-token'), { method: 'POST' });
       },
-      onChange: () => { renderMediaState(); void endStatementIfCallStopped(); },
+      onChange: () => { renderMediaState(); void endStatementIfCallStopped(); releaseCitizenInterviewIfCameraOff(); },
       onError: (error) => { controllerErrors.add(error); renderMediaState(); }
     });
   }
@@ -680,18 +681,22 @@ function renderMedia(root, caseItem) {
         <ul class="camera-menu" data-slot="cameraMenu" role="listbox" hidden></ul>
       </div>` : ''}
       <div class="button-row">
-        <button type="button" data-action="joinCall" class="warning">進入筆錄</button>
+        ${!staff && root.closest('.interview-live') ? `<button type="button" data-action="endInterview" class="warning">結束筆錄</button>` : `<button type="button" data-action="joinCall" class="warning">進入筆錄</button>
         <button type="button" data-action="toggleVideo" class="secondary" aria-pressed="false">開啟鏡頭</button>
+        <button type="button" data-action="retryMedia" class="secondary" hidden>重試視訊</button>`}
         <button type="button" data-action="toggleAudio" class="secondary" aria-pressed="false">開啟麥克風</button>
-        <button type="button" data-action="retryMedia" class="secondary" hidden>重試視訊</button>
         <button type="button" data-action="resumeAudio" class="secondary">播放聲音</button>
       </div>
     </div></div>`;
   const mediaAction = (operation) => runMediaAction(caseItem.id, root, operation).catch(showMediaError);
   $('[data-action="joinCall"]', root)?.addEventListener('click', () => mediaAction(() => joinCall(caseItem.id, true, false, root)));
+  $('[data-action="endInterview"]', root)?.addEventListener('click', () => {
+    if (!window.confirm('結束筆錄會關閉鏡頭。下次必須重新填寫、選案件並簽名。確定結束？')) return;
+    void exitCitizenInterview('已結束筆錄。要再次筆錄請重新進入。', 'info');
+  });
   $('[data-action="leaveCall"]', root)?.addEventListener('click', () => mediaAction(() => leaveCall(caseItem.id, true)));
   for (const [action, kind] of [['toggleVideo', 'video'], ['toggleAudio', 'audio']]) {
-    $(`[data-action="${action}"]`, root).addEventListener('click', () => mediaAction(async () => {
+    $(`[data-action="${action}"]`, root)?.addEventListener('click', () => mediaAction(async () => {
       const session = getVideoSession();
       const enabled = !session.tracks.has(kind);
       if (enabled && kind === 'video') stopCameraPreview();
@@ -700,7 +705,7 @@ function renderMedia(root, caseItem) {
       if (!staff) await updateStatementStatus(caseItem.id, session.hasLocalMedia);
     }));
   }
-  $('[data-action="retryMedia"]', root).addEventListener('click', () => mediaAction(() => joinCall(caseItem.id, true, false, root)));
+  $('[data-action="retryMedia"]', root)?.addEventListener('click', () => mediaAction(() => joinCall(caseItem.id, true, false, root)));
   const cameraButton = $('[data-action="chooseCamera"]', root);
   const cameraMenu = $('[data-slot="cameraMenu"]', root);
   if (cameraButton && cameraMenu && root.dataset.cameraBound !== '1') {
@@ -1403,6 +1408,57 @@ function hideCitizenSteps() {
   if (gate) { gate.hidden = true; gate.classList.add('hidden'); }
 }
 
+function showCitizenEntry() {
+  const root = $('#citizenWorkspace');
+  if (root) { root.replaceChildren(); root.classList.add('hidden'); }
+  const gate = $('#citizenGate');
+  if (gate) { gate.hidden = true; gate.classList.add('hidden'); }
+  const pick = $('#casePick');
+  const sign = $('#signStep');
+  if (pick) pick.hidden = true;
+  if (sign) sign.hidden = true;
+  $('#citizenEntry')?.classList.remove('hidden');
+}
+
+function lockCitizenInterview() {
+  state.interviewLocked = true;
+  if (!history.state?.npaInterview) history.pushState({ npaInterview: 1 }, '', location.href);
+}
+
+function releaseCitizenInterviewIfCameraOff() {
+  if (!state.interviewLocked || state.me?.user || state.mediaPending || state.leavingInterview) return;
+  const session = state.videoSession;
+  if (!session) return;
+  if (session.busy || ['connecting', 'reconnecting', 'disconnecting'].includes(session.status)) return;
+  if (session.tracks.has('video')) return;
+  void exitCitizenInterview('鏡頭已關閉，請重新進入筆錄。');
+}
+
+async function exitCitizenInterview(message, type = 'error') {
+  if (state.leavingInterview) return;
+  state.leavingInterview = true;
+  state.interviewLocked = false;
+  const caseId = state.currentCase?.id;
+  const citizen = !state.me?.user;
+  try {
+    if (state.videoSession) await state.videoSession.disconnect().catch(() => {});
+    if (citizen && caseId) await updateStatementStatus(caseId, false).catch(() => {});
+    if (citizen) await api('/api/citizen/logout', { method: 'POST' }).catch(() => {});
+  } finally {
+    clearTabSession();
+    clearInterval(state.casePollTimer);
+    if (citizen) {
+      state.me = null;
+      state.currentCase = null;
+      state.citizenCases = [];
+      state.callRoot = null;
+      showCitizenEntry();
+      showNotice(message, type);
+    }
+    state.leavingInterview = false;
+  }
+}
+
 function showCitizenInterview(caseItem) {
   hideCitizenSteps();
   const root = $('#citizenWorkspace');
@@ -1537,9 +1593,16 @@ async function agreeInterview() {
   try { await joinCall(state.currentCase.id, true, false, state.callRoot); }
   catch (error) {
     showMediaError(error);
-    showNotice('鏡頭未開啟，請按「進入筆錄」重試。', 'error');
+    await exitCitizenInterview('鏡頭未開啟，請重新進入。');
+    return;
   }
   finally { state.mediaPending = false; renderMediaState(); }
+  if (!state.videoSession?.tracks.has('video')) {
+    await exitCitizenInterview('鏡頭未開啟，請重新進入。');
+    return;
+  }
+  lockCitizenInterview();
+  showNotice('筆錄進行中。要離開請按「結束筆錄」。');
   startCitizenCasePolling();
 }
 
@@ -1674,17 +1737,38 @@ async function boot() {
     markTabSession();
     await showStaffWorkspace();
   } else if (citizenEntry && state.me?.case) {
-    markTabSession();
-    showCitizenInterview(state.me.case);
-    startCitizenCasePolling();
-    showNotice('已恢復這一筆筆錄。鏡頭尚未開啟，請按「進入筆錄」。');
-    if (state.currentCase?.interviewStatus === 'active' && state.currentCase.status !== 'closed') {
-      await updateStatementStatus(state.currentCase.id, false);
+    const caseId = state.me.case.id;
+    state.currentCase = state.me.case;
+    if (state.me.case.interviewStatus === 'active' && state.me.case.status !== 'closed') {
+      await updateStatementStatus(caseId, false).catch(() => {});
     }
+    await endBrowserLogin();
+    showNotice('鏡頭未開啟，請重新進入筆錄。', 'error');
   }
 }
 
 window.addEventListener('pagehide', endStatementOnPageExit);
+window.addEventListener('beforeunload', (event) => {
+  if (!state.interviewLocked || state.me?.user) return;
+  event.preventDefault();
+  event.returnValue = '';
+});
+window.addEventListener('popstate', () => {
+  if (!state.interviewLocked || state.me?.user) return;
+  history.pushState({ npaInterview: 1 }, '', location.href);
+  showNotice('筆錄進行中。要離開請按「結束筆錄」。', 'error');
+});
+document.addEventListener('click', (event) => {
+  if (!state.interviewLocked || state.me?.user) return;
+  const link = event.target.closest?.('a[href]');
+  if (!link) return;
+  const href = link.getAttribute('href') || '';
+  if (!href || href.startsWith('#') || href.startsWith('javascript:') || href.startsWith('tel:') || href.startsWith('mailto:')) return;
+  if (link.target === '_blank') return;
+  event.preventDefault();
+  event.stopPropagation();
+  showNotice('筆錄進行中。要離開請按「結束筆錄」。', 'error');
+}, true);
 
 const bootPromise = boot().catch((error) => {
   if (document.body.dataset.entry === 'citizen' && !['#staff', '#admin'].includes(window.location.hash)) showNotice(errorText(error), 'error');

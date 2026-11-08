@@ -665,12 +665,11 @@ function renderMedia(root, caseItem) {
     <div class="media-grid"><div class="media-controls">
       <div data-slot="videoGrid" class="video-grid video-pair">
         <p class="visually-hidden" data-slot="statementLive" role="status"></p>
-        <div class="video-tile"><div data-slot="localVideoSlot" class="video-slot"><div data-slot="localPlayer" class="video-player"></div></div><div data-slot="localLabel" class="video-label">我方（未開啟鏡頭／麥克風）</div></div>
-        <div data-slot="remotePlaceholder" class="video-tile"><div class="video-slot video-placeholder"><p>${staff ? '等待民眾傳送視訊' : '線上筆錄鏡頭啟動中'}</p></div><div class="video-label">對方（尚未傳送）</div></div>
+        <div class="video-tile"><div data-slot="localVideoSlot" class="video-slot"><div data-slot="localPlayer" class="video-player"></div></div><div data-slot="localLabel" class="video-label">${staff ? '承辦人' : '民眾'}</div></div>
+        <div data-slot="remotePlaceholder" class="video-tile"><div class="video-slot video-placeholder"><p>${staff ? '等待民眾進入筆錄' : '等待承辦人進入筆錄'}</p></div><div class="video-label">${staff ? '民眾' : '承辦人'}</div></div>
       </div>
       <p data-slot="callStatus" class="call-status" role="status" aria-live="polite"></p>
-      <p data-slot="recordingNotice" class="recording-notice">錄影尚未啟用</p>
-      <p class="muted">本頁不會自動錄影；錄影功能須另行確認並取得明確同意後才可啟用。</p>
+      <p data-slot="recordingNotice" class="recording-notice">尚未進入筆錄</p>
       <div data-slot="mediaError" class="notice error" role="status" aria-live="polite" hidden></div>
       ${staff ? `<div class="camera-picker" data-slot="cameraPicker">
         <button type="button" class="camera-select" data-action="chooseCamera" aria-haspopup="listbox" aria-expanded="false">
@@ -681,7 +680,7 @@ function renderMedia(root, caseItem) {
         <ul class="camera-menu" data-slot="cameraMenu" role="listbox" hidden></ul>
       </div>` : ''}
       <div class="button-row">
-        <button type="button" data-action="joinCall" class="warning">${staff ? '加入會議' : '開始線上筆錄'}</button>
+        <button type="button" data-action="joinCall" class="warning">進入筆錄</button>
         <button type="button" data-action="toggleVideo" class="secondary" aria-pressed="false">開啟鏡頭</button>
         <button type="button" data-action="toggleAudio" class="secondary" aria-pressed="false">開啟麥克風</button>
         <button type="button" data-action="retryMedia" class="secondary" hidden>重試視訊</button>
@@ -689,7 +688,7 @@ function renderMedia(root, caseItem) {
       </div>
     </div></div>`;
   const mediaAction = (operation) => runMediaAction(caseItem.id, root, operation).catch(showMediaError);
-  $('[data-action="joinCall"]', root)?.addEventListener('click', () => mediaAction(() => staff ? watchCall(caseItem.id, root) : joinCall(caseItem.id, true, false, root)));
+  $('[data-action="joinCall"]', root)?.addEventListener('click', () => mediaAction(() => joinCall(caseItem.id, true, false, root)));
   $('[data-action="leaveCall"]', root)?.addEventListener('click', () => mediaAction(() => leaveCall(caseItem.id, true)));
   for (const [action, kind] of [['toggleVideo', 'video'], ['toggleAudio', 'audio']]) {
     $(`[data-action="${action}"]`, root).addEventListener('click', () => mediaAction(async () => {
@@ -701,8 +700,7 @@ function renderMedia(root, caseItem) {
       if (!staff) await updateStatementStatus(caseItem.id, session.hasLocalMedia);
     }));
   }
-  $('[data-action="retryMedia"]', root).addEventListener('click', () => mediaAction(() => staff
-    ? watchCall(caseItem.id, root) : joinCall(caseItem.id, true, false, root)));
+  $('[data-action="retryMedia"]', root).addEventListener('click', () => mediaAction(() => joinCall(caseItem.id, true, false, root)));
   const cameraButton = $('[data-action="chooseCamera"]', root);
   const cameraMenu = $('[data-slot="cameraMenu"]', root);
   if (cameraButton && cameraMenu && root.dataset.cameraBound !== '1') {
@@ -783,7 +781,7 @@ function renderMediaState() {
     error ? (connected ? '連線仍在，部分功能發生錯誤；請查看下方說明。' : '視訊連線失敗，請重試。') :
     connected ? (placeholder?.hidden ? '已連線，正在接收對方視訊／語音。' : '已連線，等待對方視訊／語音。') : '尚未連線。';
   const recording = $('[data-slot="recordingNotice"]', root);
-  if (recording) recording.textContent = connected ? '視訊筆錄進行中｜錄影尚未啟用' : '錄影尚未啟用';
+  if (recording) recording.textContent = connected ? '筆錄視訊進行中' : '尚未進入筆錄';
   const citizenCallLive = Boolean(state.me?.user || (same && (session.connected || session.hasLocalMedia || ['connecting', 'reconnecting', 'disconnecting'].includes(session.status))));
   const statementLive = open && state.currentCase.interviewStatus === 'active' && citizenCallLive;
   const statementStatus = $('[data-slot="statementLive"]', root);

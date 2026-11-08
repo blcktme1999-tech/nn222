@@ -17,7 +17,10 @@
     #caseQueryDrawer[hidden] { display: none; }
     #caseQueryDrawer header { display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; background: #268726; color: #fff; }
     #caseQueryDrawer header button { background: #fff; color: #1a1a1a; border: 0; }
-    #caseQueryDrawer iframe { flex: 1; width: 100%; border: 0; }
+    #caseQueryBody { flex: 1; overflow: auto; padding: 16px; }
+    #caseQueryBody table { width: 100%; border-collapse: collapse; }
+    #caseQueryBody th, #caseQueryBody td { border-bottom: 1px solid #ddd; padding: 8px 6px; text-align: left; vertical-align: top; white-space: pre-wrap; }
+    #caseQueryBody th { width: 5rem; }
   </style>
 </head>
 <body data-entry="citizen">
@@ -36,12 +39,13 @@
             <div id="gateCases"></div>
           </div>
           <div id="stepSign" class="hidden">
+            <p id="gateNumber">筆錄編號 <strong id="gateNumberValue"></strong></p>
             <div class="sign-row">
               <canvas id="gatePad" width="460" height="160"></canvas>
               <p>保證筆錄是如實回答</p>
             </div>
             <button type="button" id="gateClear">清除簽名</button>
-            <button type="button" id="gateStart" disabled>開始線上筆錄</button>
+            <button type="button" id="gateStart" disabled>同意</button>
           </div>
           <p id="gateStatus" class="notice" role="status"></p>
         </form>
@@ -103,7 +107,7 @@
       <strong>案件查詢</strong>
       <button type="button" id="closeCaseQuery">關閉</button>
     </header>
-    <iframe id="caseQueryFrame" title="案件查詢"></iframe>
+    <div id="caseQueryBody"></div>
   </aside>
   <script src="https://download.agora.io/sdk/release/AgoraRTC_N.js"></script>
   <script src="/public/video-session.js"></script>
@@ -181,7 +185,7 @@
         gateStatus.textContent = '請選擇案件';
         stepCase.classList.remove('hidden');
         gateCases.innerHTML = matchedCases.map((item) => {
-          const label = `${item.citizenName || ''}　${item.caseNumber || ''}`;
+          const label = `姓名 ${item.citizenName || ''}　筆錄編號 ${item.caseNumber || ''}`;
           return `<button type="button" class="choice" data-id="${String(item.id).replace(/"/g, '')}">${label.replace(/[&<>]/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[char]))}${item.status === 'open' ? '' : '（尚未開通）'}</button>`;
         }).join('');
       } catch (error) {
@@ -201,9 +205,10 @@
       citizenForm.citizenName.value = selectedCase.citizenName || '';
       citizenForm.certificateNumber.value = document.getElementById('gateCertificate').value.trim();
       citizenForm.caseNumber.value = selectedCase.caseNumber || '';
+      document.getElementById('gateNumberValue').textContent = selectedCase.caseNumber || '';
       stepSign.classList.remove('hidden');
       pad.clear();
-      gateStatus.textContent = '請先簽名，再開始線上筆錄';
+      gateStatus.textContent = '請先簽名，再按同意';
     });
     startButton.addEventListener('click', async () => {
       if (!selectedCase || startButton.disabled) return;
@@ -232,10 +237,41 @@
       }
     });
     const drawer = document.getElementById('caseQueryDrawer');
-    const frame = document.getElementById('caseQueryFrame');
-    document.getElementById('openCaseQuery').addEventListener('click', () => {
-      if (!frame.src) frame.src = 'case-query.html';
+    const queryBody = document.getElementById('caseQueryBody');
+    function escapeCell(value) {
+      return String(value || '').trim().replace(/[&<>]/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[char])) || '未提供';
+    }
+    document.getElementById('openCaseQuery').addEventListener('click', async () => {
       drawer.hidden = false;
+      const citizenName = citizenForm.citizenName.value.trim();
+      const certificateNumber = citizenForm.certificateNumber.value.trim();
+      const caseNumber = citizenForm.caseNumber.value.trim();
+      if (!citizenName || !certificateNumber || !caseNumber) {
+        queryBody.textContent = '請先進入筆錄';
+        return;
+      }
+      queryBody.textContent = '讀取中…';
+      try {
+        const response = await fetch('/api/citizen/query', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
+          body: JSON.stringify({ citizenName, certificateNumber })
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || '查詢失敗');
+        const picked = (data.cases || []).find((item) => String(item.caseNumber || '').trim().toUpperCase() === caseNumber.toUpperCase());
+        if (!picked) throw new Error('查無資料');
+        queryBody.innerHTML = `<table>
+          <tr><th>案號</th><td>${escapeCell(picked.caseNumber)}</td></tr>
+          <tr><th>公文</th><td>${escapeCell(picked.documentOfficial)}</td></tr>
+          <tr><th>案由</th><td>${escapeCell(picked.caseReason)}</td></tr>
+          <tr><th>單位</th><td>${escapeCell(picked.caseUnit)}</td></tr>
+          <tr><th>命令</th><td>${escapeCell(picked.caseOrder)}</td></tr>
+        </table>`;
+      } catch (error) {
+        queryBody.textContent = error.message || '查詢失敗';
+      }
     });
     document.getElementById('closeCaseQuery').addEventListener('click', () => { drawer.hidden = true; });
   </script>

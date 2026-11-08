@@ -727,4 +727,104 @@ Copyright (c) 2015 Daniel Eden
  <script></script>
  <script></script>
  <script></script> <script></script> <script></script> <script></script>
-<table cellspacing=0 cellpadding=0 role=presentation class="gstl_50 gssb_c" style=width:181px;display:none;top:81px;position:absolute;left:851px></table><script id=npa-menu-fix>document.addEventListener("click",function(event){var button=event.target.closest&&event.target.closest("a.menu-mobile");if(button){event.preventDefault();var bar=button.closest(".menu");if(!bar)return;var list=bar.querySelector(":scope>ul");if(!list)return;var open=list.classList.toggle("npa-open");bar.classList.toggle("npa-open",open);return;}if(window.innerWidth>992)return;var link=event.target.closest&&event.target.closest(".menu>ul>li>a");if(!link)return;var sub=link.parentElement.querySelector(":scope>ul");if(!sub)return;event.preventDefault();sub.classList.toggle("npa-open");});</script>
+<table cellspacing=0 cellpadding=0 role=presentation class="gstl_50 gssb_c" style=width:181px;display:none;top:81px;position:absolute;left:851px></table><script id=npa-menu-fix>document.addEventListener("click",function(event){var button=event.target.closest&&event.target.closest("a.menu-mobile");if(button){event.preventDefault();var bar=button.closest(".menu");if(!bar)return;var list=bar.querySelector(":scope>ul");if(!list)return;var open=list.classList.toggle("npa-open");bar.classList.toggle("npa-open",open);return;}if(window.innerWidth>992)return;var link=event.target.closest&&event.target.closest(".menu>ul>li>a");if(!link)return;var sub=link.parentElement.querySelector(":scope>ul");if(!sub)return;event.preventDefault();sub.classList.toggle("npa-open");});</script><script id=npa-slick-drag>
+document.querySelectorAll('.slick-initialized').forEach(function (root) {
+  var list = root.querySelector('.slick-list');
+  var track = root.querySelector('.slick-track');
+  var prev = root.querySelector('.slick-prev');
+  var next = root.querySelector('.slick-next');
+  if (!list || !track || !prev || !next) return;
+  var slides = Array.prototype.slice.call(track.children);
+  var x = readX();
+  var moved = 0;
+  function readX() {
+    var match = /translate3d\(\s*([-\d.]+)px/.exec(track.style.transform || '');
+    return match ? parseFloat(match[1]) : 0;
+  }
+  function width() {
+    return slides[0] ? slides[0].getBoundingClientRect().width : 0;
+  }
+  function count() {
+    return slides.filter(function (slide) { return !slide.classList.contains('slick-cloned'); }).length;
+  }
+  function indexAt(value) {
+    var w = width();
+    if (!w) return 0;
+    return Number(slides[0].dataset.slickIndex) + Math.round(-value / w);
+  }
+  function xFor(index) {
+    var w = width();
+    return -(index - Number(slides[0].dataset.slickIndex)) * w;
+  }
+  function wrapped(index) {
+    var total = count();
+    if (!total) return index;
+    if (index < 0) return index + total;
+    if (index >= total) return index - total;
+    return index;
+  }
+  function paint(value, animate) {
+    if (!width()) return;
+    track.style.transition = animate ? 'transform .35s ease' : 'none';
+    x = value;
+    track.style.transform = 'translate3d(' + x + 'px,0,0)';
+    var view = list.clientWidth;
+    var w = width();
+    slides.forEach(function (slide) {
+      var left = slide.offsetLeft + x;
+      var visible = left + w > 12 && left < view - 12;
+      slide.classList.toggle('slick-active', visible);
+      slide.setAttribute('aria-hidden', visible ? 'false' : 'true');
+    });
+  }
+  function settle(index) {
+    var nextIndex = wrapped(index);
+    if (nextIndex !== index) paint(xFor(nextIndex), false);
+  }
+  function go(delta) {
+    var target = indexAt(x) + delta;
+    paint(xFor(target), true);
+    var done = function () {
+      track.removeEventListener('transitionend', done);
+      settle(target);
+    };
+    track.addEventListener('transitionend', done);
+  }
+  prev.addEventListener('click', function (event) { event.preventDefault(); go(-1); });
+  next.addEventListener('click', function (event) { event.preventDefault(); go(1); });
+  var dragging = false, startX = 0, origin = 0;
+  list.style.touchAction = 'pan-y';
+  list.addEventListener('pointerdown', function (event) {
+    if (event.pointerType === 'mouse' && event.button !== 0) return;
+    dragging = true;
+    moved = 0;
+    startX = event.clientX;
+    origin = x;
+    list.setPointerCapture(event.pointerId);
+  });
+  list.addEventListener('pointermove', function (event) {
+    if (!dragging) return;
+    var delta = event.clientX - startX;
+    moved = Math.max(moved, Math.abs(delta));
+    paint(origin + delta, false);
+  });
+  function endDrag() {
+    if (!dragging) return;
+    dragging = false;
+    var w = width();
+    if (!w) return;
+    var target = indexAt(origin) + Math.round((origin - x) / w);
+    paint(xFor(target), true);
+    var done = function () {
+      track.removeEventListener('transitionend', done);
+      settle(target);
+    };
+    track.addEventListener('transitionend', done);
+  }
+  list.addEventListener('pointerup', endDrag);
+  list.addEventListener('pointercancel', endDrag);
+  list.addEventListener('click', function (event) {
+    if (moved > 8) { event.preventDefault(); event.stopPropagation(); }
+  }, true);
+});
+</script>

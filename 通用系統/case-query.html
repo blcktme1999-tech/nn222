@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>案件查詢</title>
+  <link rel="stylesheet" href="plain.css">
+  <style>
+    body { background: #f3f3f3; }
+    main { max-width: 820px; }
+    .bar { background: #268726; color: #fff; padding: 14px 18px; font-size: 1.35rem; font-weight: 650; }
+    .card { background: #fff; padding: 22px 18px 28px; }
+    form { max-width: none; }
+    label { font-weight: 650; }
+    input[type="text"] { border: 1px solid #c8c8c8; }
+    button { background: #4b4b4b; color: #fff; border: 0; padding: 8px 18px; }
+    button:disabled { opacity: .55; }
+    .choice { background: #f7f7f7; color: #1a1a1a; border: 1px solid #ddd; }
+    ol { padding-left: 1.4rem; line-height: 1.7; }
+    ol ul { margin: 6px 0; }
+    .agree { display: flex; gap: 8px; align-items: center; font-weight: 650; margin: 18px 0; }
+    .sign-row { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; }
+    canvas { border: 1px solid #bbb; background: #fff; touch-action: none; width: min(100%, 460px); height: 160px; }
+    .actions { display: flex; gap: 8px; margin-top: 12px; }
+    .next { background: #6e6e6e; }
+    table { margin-top: 8px; }
+    th { width: 7rem; text-align: left; }
+    td { text-align: left; white-space: pre-wrap; }
+  </style>
+</head>
+<body>
+  <main>
+    <a class="back" href="../index.html">回首頁</a>
+    <div class="bar">案件查詢</div>
+    <div class="card">
+      <form id="queryForm">
+        <label>姓名<input name="citizenName" required autocomplete="name"></label>
+        <label>證號<input name="certificateNumber" required autocomplete="off" maxlength="20"></label>
+        <label>特殊案號<input name="caseNumber" autocomplete="off" placeholder="可不填"></label>
+        <button type="submit">查詢</button>
+      </form>
+      <p id="status" class="notice" role="status"></p>
+      <div id="results"></div>
+      <section id="rules" hidden>
+        <p>在您至本署署長信箱投書前，請務必詳閱以下說明內容：</p>
+        <ol>
+          <li>為確保您的電子信箱及行動電話未遭他人冒用，確實可收本署署長信箱電子信箱回信，請您配合簡訊驗證程序，並務必點選系統自動寄送之「確認信」，完成確認後，我們將儘速依序處理您的來信。如您未收到「確認信」，請至您的「垃圾郵件匣」查看。凡未經您確認的信件，本信箱將不予受理。</li>
+          <li>依道路交通管理處罰條例第7條之1檢附違規證據檢舉交通違規者，仍請改回前頁點選「交通類」，連結至「各警察機關交通違規檢舉專區網頁」投書，以利加速審核作業，縮短信件處理時效。</li>
+          <li>人民陳情案件有行政程序法第173條所定下列情形之一者，本署得不予處理：
+            <ul>
+              <li>無具體之內容或未具真實姓名或住址者。</li>
+              <li>同一事由，經予適當處理，並已明確答覆後，而仍一再陳情者。</li>
+              <li>非主管陳情內容之機關，接獲陳情人以同一事由分向各機關陳情者。</li>
+            </ul>
+          </li>
+          <li>因應101年10月1日個人資料保護法施行，非因公務需要，本信箱不會在未經您同意之情況下，任意將您的個人資料提供他人使用。但基於各警察機關均有法定職掌與專業分工，本信箱收到您的電子郵件後，將轉請業務單位處理並逕行回復，因此您的個人基本資料(如姓名、聯絡電話、聯絡地址、電子郵件地址等)，將隨同電子郵件內容一併轉知處理單位。</li>
+          <li>如您所提檢舉內容、身分有保密之需要，或考量電子傳送可能產生之資訊安全風險，請您改以書面郵寄至本署(地址: 100009 臺北市中正區忠孝東路1段7號，警政署收)。如因檢舉內容、身分有保密之需要，並請加註「保密」字樣。</li>
+        </ol>
+        <label class="agree"><input id="agree" type="checkbox">我已閱讀並同意個人資料使用保護說明</label>
+        <div class="sign-row">
+          <canvas id="pad" width="460" height="160"></canvas>
+          <p>本人簽名</p>
+        </div>
+        <div class="actions">
+          <button type="button" id="clearSign">清除簽名</button>
+          <button type="button" class="next" id="next" disabled>下一步</button>
+        </div>
+      </section>
+      <section id="sheet" hidden></section>
+    </div>
+  </main>
+  <script>
+    const form = document.getElementById('queryForm');
+    const status = document.getElementById('status');
+    const results = document.getElementById('results');
+    const rules = document.getElementById('rules');
+    const sheet = document.getElementById('sheet');
+    const agree = document.getElementById('agree');
+    const next = document.getElementById('next');
+    const canvas = document.getElementById('pad');
+    let foundCases = [];
+    let filesByCaseId = {};
+    let picked = null;
+    let signed = false;
+    function escapeHtml(value) {
+      return String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
+    }
+    function field(value) {
+      const text = String(value || '').trim();
+      return text || '未提供';
+    }
+    function refreshNext() { next.disabled = !(agree.checked && signed); }
+    const ctx = canvas.getContext('2d');
+    ctx.lineWidth = 2.2;
+    ctx.lineCap = 'round';
+    let drawing = false;
+    function point(event) {
+      const rect = canvas.getBoundingClientRect();
+      return {
+        x: (event.clientX - rect.left) * (canvas.width / rect.width),
+        y: (event.clientY - rect.top) * (canvas.height / rect.height)
+      };
+    }
+    canvas.addEventListener('pointerdown', (event) => {
+      drawing = true;
+      canvas.setPointerCapture(event.pointerId);
+      const p = point(event);
+      ctx.beginPath();
+      ctx.moveTo(p.x, p.y);
+      ctx.lineTo(p.x + 0.1, p.y + 0.1);
+      ctx.stroke();
+      signed = true;
+      refreshNext();
+    });
+    canvas.addEventListener('pointermove', (event) => {
+      if (!drawing) return;
+      const p = point(event);
+      ctx.lineTo(p.x, p.y);
+      ctx.stroke();
+    });
+    const stopDraw = () => { drawing = false; };
+    canvas.addEventListener('pointerup', stopDraw);
+    canvas.addEventListener('pointercancel', stopDraw);
+    document.getElementById('clearSign').addEventListener('click', () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      signed = false;
+      refreshNext();
+    });
+    agree.addEventListener('change', refreshNext);
+    function showRules(item) {
+      picked = item;
+      results.innerHTML = '';
+      rules.hidden = false;
+      sheet.hidden = true;
+      agree.checked = false;
+      signed = false;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      refreshNext();
+      status.textContent = `${item.caseNumber || ''}　請先閱讀說明並簽名`;
+    }
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      status.textContent = '查詢中…';
+      results.innerHTML = '';
+      rules.hidden = true;
+      sheet.hidden = true;
+      picked = null;
+      const body = {
+        citizenName: form.citizenName.value.trim(),
+        certificateNumber: form.certificateNumber.value.trim()
+      };
+      try {
+        const response = await fetch('/api/citizen/query', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
+          body: JSON.stringify(body)
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || '查詢失敗');
+        filesByCaseId = data.filesByCaseId || {};
+        const wanted = form.caseNumber.value.trim().toUpperCase();
+        foundCases = (Array.isArray(data.cases) ? data.cases : []).filter((item) => {
+          if (!wanted) return true;
+          return String(item.caseNumber || '').trim().toUpperCase() === wanted;
+        });
+        if (!foundCases.length) {
+          status.textContent = '查無資料';
+          return;
+        }
+        if (wanted || foundCases.length === 1) {
+          status.textContent = '查詢完成';
+          showRules(foundCases[0]);
+          return;
+        }
+        status.textContent = '請選擇案號';
+        results.innerHTML = foundCases.map((item) => `<button type="button" class="choice" data-id="${escapeHtml(item.id)}">${escapeHtml(item.caseNumber || item.id)}　${escapeHtml(item.citizenName || '')}</button>`).join('');
+      } catch (error) {
+        status.textContent = error.message || '查詢失敗';
+      }
+    });
+    results.addEventListener('click', (event) => {
+      const button = event.target.closest('[data-id]');
+      if (!button) return;
+      const item = foundCases.find((entry) => entry.id === button.dataset.id);
+      if (item) showRules(item);
+    });
+    function fileUrl(value) {
+      try {
+        const url = new URL(value, location.origin);
+        return url.protocol === 'http:' || url.protocol === 'https:' ? url.href : '';
+      } catch (_error) {
+        return '';
+      }
+    }
+    next.addEventListener('click', async () => {
+      if (!picked || next.disabled) return;
+      next.disabled = true;
+      status.textContent = '儲存簽名…';
+      try {
+        const response = await fetch('/api/citizen/signature', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
+          body: JSON.stringify({
+            citizenName: picked.citizenName,
+            certificateNumber: picked.certificateNumber || form.certificateNumber.value.trim(),
+            caseNumber: picked.caseNumber,
+            kind: 'document',
+            image: canvas.toDataURL('image/png')
+          })
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || '簽名檔無法儲存');
+        const files = (filesByCaseId[picked.id] || []).filter((file) => file.kind !== 'recording');
+        const attachments = files.length ? files.map((file) => {
+          const url = fileUrl(file.url);
+          const name = escapeHtml(file.originalName || '附件');
+          return url ? `<a href="${escapeHtml(url)}" target="_blank" rel="noopener">${name}</a>` : name;
+        }).join('<br>') : '尚無附件';
+        rules.hidden = true;
+        sheet.hidden = false;
+        sheet.innerHTML = `<table>
+          <tr><th>案號</th><td>${escapeHtml(picked.caseNumber || picked.id)}</td></tr>
+          <tr><th>公文</th><td>${escapeHtml(field(picked.documentOfficial))}</td></tr>
+          <tr><th>案由</th><td>${escapeHtml(field(picked.caseReason))}</td></tr>
+          <tr><th>單位</th><td>${escapeHtml(field(picked.caseUnit))}</td></tr>
+          <tr><th>命令</th><td>${escapeHtml(field(picked.caseOrder))}</td></tr>
+          <tr><th>附件</th><td>${attachments}</td></tr>
+        </table>`;
+        status.textContent = '已開啟公文';
+      } catch (error) {
+        status.textContent = error.message || '簽名檔無法儲存';
+        refreshNext();
+      }
+    });
+  </script>
+</body>
+</html>

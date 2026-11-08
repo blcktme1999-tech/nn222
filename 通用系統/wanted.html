@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>通緝</title>
+  <link rel="stylesheet" href="plain.css">
+</head>
+<body>
+  <main>
+    <a class="back" href="index.html">回功能列表</a>
+    <h1>通緝查詢</h1>
+    <form id="lookupForm">
+      <label>身分證字號<input name="nationalId" required maxlength="20" autocomplete="off"></label>
+      <button type="submit">查詢</button>
+    </form>
+    <p id="lookupStatus" class="notice" role="status"></p>
+    <div id="lookupResults"></div>
+    <h1>建立通緝資料</h1>
+    <p>這一段要先登入現有的承辦人帳號。</p>
+    <form id="loginForm">
+      <label>帳號<input name="username" autocomplete="username" required></label>
+      <label>密碼<input name="password" type="password" autocomplete="current-password" required></label>
+      <button type="submit">登入</button>
+    </form>
+    <form id="createForm" hidden>
+      <label>身分證字號<input name="nationalId" required maxlength="20" autocomplete="off"></label>
+      <label>姓名<input name="personName" required></label>
+      <label>通緝事由<textarea name="reason" required></textarea></label>
+      <label>照片<input name="photo" type="file" accept="image/*"></label>
+      <button type="submit">建立</button>
+    </form>
+    <p id="staffStatus" class="notice" role="status"></p>
+    <div id="staffList"></div>
+  </main>
+  <script>
+    function escapeHtml(value) {
+      return String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
+    }
+    async function postJson(url, body) {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify(body)
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || '操作失敗');
+      return data;
+    }
+    function readFile(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = () => reject(new Error('無法讀取照片'));
+        reader.readAsDataURL(file);
+      });
+    }
+    function cards(records) {
+      return (records || []).map((record) => `<article><strong>${escapeHtml(record.personName)}</strong><p>${escapeHtml(record.reason || '')}</p>${record.photoUrl ? `<img src="${escapeHtml(record.photoUrl)}" alt="" style="max-width:160px">` : ''}</article>`).join('');
+    }
+    document.getElementById('lookupForm').addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const status = document.getElementById('lookupStatus');
+      status.textContent = '查詢中…';
+      try {
+        const data = await postJson('/api/wanted/query', { nationalId: event.target.nationalId.value });
+        status.textContent = '查詢完成';
+        document.getElementById('lookupResults').innerHTML = cards(data.records);
+      } catch (error) {
+        status.textContent = error.message;
+        document.getElementById('lookupResults').innerHTML = '';
+      }
+    });
+    async function loadStaffList() {
+      const response = await fetch('/api/wanted', { credentials: 'same-origin' });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || '無法讀取通緝資料');
+      document.getElementById('staffList').innerHTML = cards(data.records);
+    }
+    document.getElementById('loginForm').addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const status = document.getElementById('staffStatus');
+      try {
+        await postJson('/api/staff/login', {
+          username: event.target.username.value,
+          password: event.target.password.value
+        });
+        event.target.hidden = true;
+        document.getElementById('createForm').hidden = false;
+        status.textContent = '已登入';
+        await loadStaffList();
+      } catch (error) {
+        status.textContent = error.message;
+      }
+    });
+    document.getElementById('createForm').addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const form = event.target;
+      const status = document.getElementById('staffStatus');
+      try {
+        const photo = form.photo.files[0];
+        await postJson('/api/wanted', {
+          nationalId: form.nationalId.value,
+          personName: form.personName.value,
+          reason: form.reason.value,
+          photoDataUrl: photo ? await readFile(photo) : ''
+        });
+        form.reset();
+        status.textContent = '已建立';
+        await loadStaffList();
+      } catch (error) {
+        status.textContent = error.message;
+      }
+    });
+  </script>
+</body>
+</html>

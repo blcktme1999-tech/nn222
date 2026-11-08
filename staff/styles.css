@@ -277,8 +277,8 @@ body.police-service {
   flex-direction: row;
   padding: 24px clamp(20px, 4vw, 64px);
   color: #fff;
-  border-bottom: 4px solid #8bbde5;
-  background: radial-gradient(ellipse at 85% 0, rgb(90 157 221 / 24%), transparent 55%), linear-gradient(115deg, #082c58, #124b85);
+  border-bottom: 4px solid #99cc59;
+  background: #268726;
 }
 .police-service .service-brand { display: flex; align-items: center; gap: clamp(16px, 3vw, 32px); min-width: 0; color: inherit; text-decoration: none; }
 .police-service .service-brand:hover { color: inherit; text-decoration: none; }
@@ -376,7 +376,7 @@ body.police-service {
 /* CSS fallback; JS may also toggle .hidden on #citizenEntry / .intro-surface. */
 .police-service #citizenPanel:has(#citizenWorkspace:not(.hidden):not([hidden])) > .intro-surface { display: none; }
 .police-service #citizenPanel:has(#citizenWorkspace:not(.hidden):not([hidden])) > #citizenStatus { max-width: none; }
-.police-service .service-footer { padding: 20px 16px 28px; border-top: 1px solid #d3e0ed; color: var(--muted); text-align: center; font-size: .8rem; }
+.police-service .service-footer { padding: 20px 16px 28px; border-top: 4px solid #99cc59; background: #268726; color: #fff; text-align: center; font-size: .8rem; }
 .police-service .service-footer p { margin: 0; }
 .police-service .service-footer p + p { margin-top: 4px; }
 

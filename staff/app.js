@@ -878,18 +878,32 @@ async function watchCall(caseId, root = state.callRoot) {
 }
 
 // Compatibility wrappers; all media ownership stays in ReportVideoSession.
+async function openStaffRoom(cases) {
+  if (!state.me?.user || state.mediaPending) return;
+  const live = cases.find((item) => item.status !== 'closed' && item.interviewStatus === 'active');
+  if (!live) return;
+  if (state.videoSession?.hasLocalMedia && state.videoSession.caseId && state.videoSession.caseId !== live.id) return;
+  const root = state.me.user.role === 'admin' ? $('#adminWorkspace') : $('#staffWorkspace');
+  if (!root?.isConnected) return;
+  if (state.currentCase?.id !== live.id || state.detailRoot !== root) {
+    const opened = await selectCaseNow(root, live, state.me.user.role === 'admin');
+    if (!opened) return;
+  }
+  if (state.videoSession?.connected && state.videoSession.caseId === live.id) return;
+  try { await watchCall(live.id, state.callRoot); }
+  catch (error) { showMediaError(error); }
+}
+
 async function joinCall(caseId, markStatement = false, _unused = false, root = state.callRoot) {
   requireOpenRoot(caseId, root);
   const session = getVideoSession();
   await session.connect(caseId, root);
   let mediaFailure;
-  try { await session.publishBoth(); } catch (error) { mediaFailure = error; }
-  if (markStatement && !state.me?.user && session.hasLocalMedia) {
-    try { await updateStatementStatus(caseId, true); } catch (error) {
-      if (!mediaFailure) throw error;
-      showMediaError(error);
-    }
-  }
+  try {
+    await session.setDevice('video', true);
+    if (markStatement && !state.me?.user && session.tracks.has('video')) await updateStatementStatus(caseId, true);
+    await session.setDevice('audio', true);
+  } catch (error) { mediaFailure = error; }
   if (mediaFailure) throw mediaFailure;
 }
 
@@ -1172,7 +1186,7 @@ function loadCases() {
       if (state.me.user.role === 'admin') renderCaseShell($('#adminWorkspace'), state.cases, true);
       const selected = state.cases.find((item) => item.id === state.currentCase?.id);
       if (selected) await applySelectedCase(selected);
-      // No initial selection, no active-case jumping and no detail reconstruction.
+      await openStaffRoom(state.cases);
       inlineNotice($('#staffWorkspace'), '', 'caseLoadError');
       inlineNotice($('#adminWorkspace'), '', 'caseLoadError');
     });

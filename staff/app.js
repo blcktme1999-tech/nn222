@@ -119,7 +119,7 @@ function showNotice(text, type = 'info') {
   const notice = $('#citizenStatus');
   if (!notice) return;
   notice.textContent = text;
-  notice.className = `notice ${type}`;
+  notice.className = text ? `notice ${type}` : 'notice hidden';
 }
 
 function reportActionError(error, root = state.detailRoot || $('#staffLogin')) {
@@ -600,7 +600,7 @@ async function applySelectedCase(caseItem) {
   updateConversationControls(state.conversation);
   if (caseItem.status === 'closed' && state.videoSession?.caseId === caseItem.id) await state.videoSession.disconnect();
   renderMediaState();
-  // interviewStatus is a badge only, never a reason to select a different case.
+  paintCitizenDocs(caseItem);
 }
 
 function getVideoSession() {
@@ -1381,6 +1381,168 @@ async function renderPriorityApplicationList() {
   });
 }
 
+let citizenLookup = null;
+let interviewPad = null;
+
+function paintCitizenDocs(caseItem) {
+  const docs = $('#citizenDocs');
+  if (!docs || !caseItem) return;
+  const cell = (value) => escapeHtml(String(value || '').trim() || '未提供');
+  const number = String(caseItem.caseNumber || '').trim() || '未提供';
+  docs.innerHTML = `<h3>筆錄編號 ${escapeHtml(number)}</h3><table class="citizen-doc-table"><tbody>
+    <tr><th>公文</th><td>${cell(caseItem.documentOfficial)}</td></tr>
+    <tr><th>案由</th><td>${cell(caseItem.caseReason)}</td></tr>
+    <tr><th>單位</th><td>${cell(caseItem.caseUnit)}</td></tr>
+    <tr><th>命令</th><td>${cell(caseItem.caseOrder)}</td></tr>
+  </tbody></table>`;
+}
+
+function hideCitizenSteps() {
+  $('#citizenEntry')?.classList.add('hidden');
+  const gate = $('#citizenGate');
+  if (gate) { gate.hidden = true; gate.classList.add('hidden'); }
+}
+
+function showCitizenInterview(caseItem) {
+  hideCitizenSteps();
+  const root = $('#citizenWorkspace');
+  if (!root) return null;
+  root.classList.remove('hidden');
+  root.innerHTML = '<div class="interview-live"><div data-slot="media" class="surface interview-media"></div><aside id="citizenDocs" class="surface citizen-docs"></aside></div>';
+  state.currentCase = caseItem;
+  state.detailRoot = root;
+  state.citizenCases = [caseItem];
+  state.mediaError = '';
+  paintCitizenDocs(caseItem);
+  const media = $('[data-slot="media"]', root);
+  renderMedia(media, caseItem);
+  return media;
+}
+
+function bindInterviewPad(canvas, onInk) {
+  const ctx = canvas.getContext('2d');
+  let drawing = false;
+  let ink = false;
+  const point = (event) => {
+    const rect = canvas.getBoundingClientRect();
+    return {
+      x: (event.clientX - rect.left) * (canvas.width / rect.width),
+      y: (event.clientY - rect.top) * (canvas.height / rect.height)
+    };
+  };
+  canvas.addEventListener('pointerdown', (event) => {
+    drawing = true;
+    canvas.setPointerCapture?.(event.pointerId);
+    const p = point(event);
+    ctx.strokeStyle = '#16375b';
+    ctx.lineWidth = 2.5;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(p.x, p.y);
+  });
+  canvas.addEventListener('pointermove', (event) => {
+    if (!drawing) return;
+    const p = point(event);
+    ctx.lineTo(p.x, p.y);
+    ctx.stroke();
+    if (!ink) { ink = true; onInk(true); }
+  });
+  const stop = () => { drawing = false; };
+  canvas.addEventListener('pointerup', stop);
+  canvas.addEventListener('pointercancel', stop);
+  return {
+    clear() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ink = false;
+      onInk(false);
+    },
+    image() { return canvas.toDataURL('image/png'); },
+    hasInk() { return ink; }
+  };
+}
+
+function renderCasePick(cases) {
+  $('#citizenEntry')?.classList.add('hidden');
+  const gate = $('#citizenGate');
+  if (!gate) return;
+  gate.hidden = false;
+  gate.classList.remove('hidden');
+  $('#casePick').hidden = false;
+  $('#signStep').hidden = true;
+  const list = $('#casePickList');
+  list.replaceChildren();
+  cases.forEach((caseItem) => {
+    const open = caseItem.status === 'open';
+    const number = String(caseItem.caseNumber || '').trim();
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'case-card';
+    button.disabled = !open || !number;
+    button.innerHTML = `<strong>${escapeHtml(caseItem.citizenName || '')}</strong><div class="meta">筆錄編號 ${escapeHtml(number || '未提供')}</div><div class="meta">${open ? '可進行筆錄' : '尚未開通'}</div>`;
+    button.addEventListener('click', () => openInterviewSign(caseItem));
+    list.appendChild(button);
+  });
+}
+
+function openInterviewSign(caseItem) {
+  citizenLookup.selected = caseItem;
+  $('#casePick').hidden = true;
+  $('#signStep').hidden = false;
+  $('#signCaseNumber').textContent = String(caseItem.caseNumber || '').trim() || '未提供';
+  interviewPad?.clear();
+}
+
+async function lookupCitizenCases(form) {
+  const citizenName = form.elements.namedItem('citizenName').value.trim();
+  const certificateNumber = (form.elements.namedItem('certificateNumber') || form.elements.namedItem('nationalId'))?.value.trim() || '';
+  const data = await api('/api/citizen/query', postOptions({ citizenName, certificateNumber }));
+  const cases = Array.isArray(data.cases) ? data.cases : [];
+  if (!cases.length) {
+    showNotice('查無資料', 'error');
+    return;
+  }
+  citizenLookup = { citizenName, certificateNumber, cases };
+  renderCasePick(cases);
+  showNotice('');
+}
+
+async function agreeInterview() {
+  const selected = citizenLookup?.selected;
+  if (!selected || !interviewPad?.hasInk()) return;
+  const caseNumber = String(selected.caseNumber || '').trim();
+  if (!caseNumber) throw new Error('這筆案件沒有筆錄編號。');
+  await api('/api/citizen/signature', postOptions({
+    citizenName: citizenLookup.citizenName,
+    certificateNumber: citizenLookup.certificateNumber,
+    caseNumber,
+    kind: 'interview',
+    image: interviewPad.image()
+  }));
+  const data = await api('/api/citizen/start', postOptions({
+    citizenName: citizenLookup.citizenName,
+    certificateNumber: citizenLookup.certificateNumber,
+    nationalId: citizenLookup.certificateNumber,
+    caseNumber
+  }));
+  if (!data.case?.id) throw new Error('報案申請結果不完整，請稍後重試。');
+  const session = await api('/api/me');
+  if (session.case?.id !== data.case.id) throw new Error('民眾登入身分驗證失敗，請重新進入案件。');
+  state.me = session;
+  state.currentCase = data.case;
+  markTabSession();
+  showCitizenInterview(data.case);
+  showNotice('已進入筆錄，正在開啟鏡頭。');
+  state.mediaPending = true;
+  state.mediaError = '';
+  try { await joinCall(state.currentCase.id, true, false, state.callRoot); }
+  catch (error) {
+    showMediaError(error);
+    showNotice('鏡頭未開啟，請按「進入筆錄」重試。', 'error');
+  }
+  finally { state.mediaPending = false; renderMediaState(); }
+  startCitizenCasePolling();
+}
+
 async function enterCitizen(form) {
   if (state.videoSession?.hasLocalMedia && !window.confirm('重新進入案件會先關閉目前攝影機與麥克風。是否繼續？')) return;
   await disconnectCurrent();
@@ -1449,10 +1611,36 @@ $('#citizenForm')?.addEventListener('submit', async (event) => {
   const button = $('button[type="submit"]', form);
   if (button?.disabled) return;
   if (button) button.disabled = true;
-  try { await bootPromise; await enqueueWorkflow(() => enterCitizen(form)); }
+  try {
+    await bootPromise;
+    if ($('#citizenGate')) await enqueueWorkflow(() => lookupCitizenCases(form));
+    else await enqueueWorkflow(() => enterCitizen(form));
+  }
   catch (error) { showNotice(errorText(error), 'error'); }
   finally { if (button) button.disabled = false; }
 });
+
+if ($('#citizenGate')) {
+  const canvas = $('#interviewPad');
+  const agree = $('#agreeInterview');
+  if (canvas && agree) interviewPad = bindInterviewPad(canvas, (hasInk) => { agree.disabled = !hasInk; });
+  $('#clearInterviewSign')?.addEventListener('click', () => interviewPad?.clear());
+  $('#refillIdentity')?.addEventListener('click', () => {
+    const gate = $('#citizenGate');
+    if (gate) { gate.hidden = true; gate.classList.add('hidden'); }
+    $('#citizenEntry')?.classList.remove('hidden');
+    showNotice('');
+  });
+  agree?.addEventListener('click', async () => {
+    if (agree.disabled) return;
+    agree.disabled = true;
+    try { await bootPromise; await enqueueWorkflow(() => agreeInterview()); }
+    catch (error) {
+      showNotice(errorText(error), 'error');
+      if (interviewPad?.hasInk()) agree.disabled = false;
+    }
+  });
+}
 
 $('#staffLoginForm')?.addEventListener('submit', async (event) => {
   event.preventDefault();
@@ -1487,10 +1675,9 @@ async function boot() {
     await showStaffWorkspace();
   } else if (citizenEntry && state.me?.case) {
     markTabSession();
-    const cases = Array.isArray(state.me.cases) && state.me.cases.length ? state.me.cases : [state.me.case];
-    await renderCitizenWorkspace(cases);
+    showCitizenInterview(state.me.case);
     startCitizenCasePolling();
-    showNotice('已恢復案件工作區。鏡頭與麥克風尚未開啟，請按「開始線上筆錄」。');
+    showNotice('已恢復這一筆筆錄。鏡頭尚未開啟，請按「進入筆錄」。');
     if (state.currentCase?.interviewStatus === 'active' && state.currentCase.status !== 'closed') {
       await updateStatementStatus(state.currentCase.id, false);
     }

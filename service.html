@@ -175,7 +175,7 @@ Copyright (c) 2015 Daniel Eden
  <div id=serviceApp>
 <link rel="stylesheet" href="/staff/service.css">
 <script>document.body.dataset.entry='citizen';</script>
-<main id="mainContent" class="layout" tabindex="-1">
+<main id="mainContent" class="layout police-service" tabindex="-1">
     <section id="citizenPanel" class="panel active">
       <div id="citizenEntry" class="surface intro-surface citizen-entry">
         <form id="citizenForm" class="stacked-form" aria-describedby="entryHelp">
@@ -184,12 +184,30 @@ Copyright (c) 2015 Daniel Eden
           <input id="citizenName" name="citizenName" type="text" autocomplete="name" placeholder="請輸入姓名" required>
           <label for="certificateNumber">身分證號 <span class="field-hint">必填</span></label>
           <input id="certificateNumber" name="certificateNumber" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="請輸入身分證號" maxlength="20" required>
-          <button class="entry-submit" type="submit">申請線上立案 <span aria-hidden="true">→</span></button>
+          <button class="entry-submit" type="submit">下一步 <span aria-hidden="true">→</span></button>
         </form>
         <div id="entryHelp" class="entry-disclaimer">
           <strong>服務使用提醒</strong>
           <p>線上筆錄需允許瀏覽器使用攝影機與麥克風；請在安全、安靜的環境操作，並妥善保護個人資料。</p>
           <p>如遇緊急事故或人身安全危險，請立即撥打 <a href="tel:110">110</a>，勿等待線上審核。</p>
+        </div>
+      </div>
+      <div id="citizenGate" class="surface citizen-gate" hidden>
+        <div id="casePick">
+          <h2>選擇案件</h2>
+          <p class="muted">請選擇要進行筆錄的案件。</p>
+          <div id="casePickList" class="case-pick-list"></div>
+          <button type="button" id="refillIdentity" class="secondary">重新填寫</button>
+        </div>
+        <div id="signStep" hidden>
+          <h2>簽名</h2>
+          <p>筆錄編號 <strong id="signCaseNumber"></strong></p>
+          <p class="sign-hint">保證筆錄是如實回答</p>
+          <canvas id="interviewPad" width="640" height="180" aria-label="簽名"></canvas>
+          <div class="button-row">
+            <button type="button" id="clearInterviewSign" class="secondary">清除</button>
+            <button type="button" id="agreeInterview" disabled>同意</button>
+          </div>
         </div>
       </div>
       <div id="citizenStatus" class="notice hidden" role="status" aria-live="polite" aria-atomic="true"></div>

@@ -114,6 +114,22 @@
   border-radius: 6px;
 }
 
+#serviceApp { padding: 8px 16px 24px; box-sizing: border-box; }
+#serviceApp > .service-footer { display: none; }
+#serviceApp .citizen-gate { max-width: 760px; margin: 16px auto; padding: 24px; }
+#serviceApp .citizen-gate h2 { margin: 0 0 8px; color: #123d69; }
+#serviceApp .case-pick-list { display: grid; gap: 10px; margin: 12px 0 16px; }
+#serviceApp .case-pick-list .case-card { width: 100%; text-align: left; }
+#serviceApp .sign-hint { margin: 8px 0; color: #9b2424; font-weight: 700; }
+#serviceApp #interviewPad { display: block; width: 100%; height: 180px; border: 1px solid #9bb; border-radius: 8px; background: #fff; touch-action: none; cursor: crosshair; }
+#serviceApp .interview-live { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(220px, .72fr); gap: 16px; align-items: start; margin: 12px auto 28px; }
+#serviceApp .interview-media { padding: 12px; }
+@media (min-width: 1100px) {
+  #serviceApp { padding-inline: 88px; }
+}
+@media (max-width: 800px) {
+  #serviceApp .interview-live { grid-template-columns: minmax(0, 1fr); }
+}
 #serviceApp .workspace{ margin-top: 1.4rem; }
 #serviceApp .hidden,#serviceApp [hidden]{ display: none !important; }
 

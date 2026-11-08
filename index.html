@@ -71,7 +71,7 @@ Copyright (c) 2015 Daniel Eden
 .center_frame .banner.slick-slider{display:none!important}
 .sbanner .slick-slide a{display:flex;align-items:center;justify-content:center}
 .sbanner .slick-slide img{max-width:100%;height:auto;margin:0 auto}
-@media (max-width:991px){.sbanner.slick-slider{padding:0 34px;box-sizing:border-box}}
+@media (max-width:991px){.sbanner.slick-slider,.slider_icon .iconlist.slick-slider{padding:0 36px;box-sizing:border-box}.slider_icon .slick-list{width:100%}}
 @media (max-width:1199px){
   .center_frame,body .center_frame{max-height:none!important;height:auto!important;overflow:visible!important}
   body .center{display:block!important;padding:12px 10px 4px}
@@ -844,9 +844,10 @@ document.querySelectorAll('.slick-initialized').forEach(function (root) {
   var next = root.querySelector('.slick-next');
   if (!list || !track || !prev || !next) return;
   var slides = Array.prototype.slice.call(track.children);
-  if (root.classList.contains('sbanner')) {
+  if (root.classList.contains('sbanner') || root.classList.contains('iconlist')) {
     var view = list.clientWidth || root.clientWidth;
-    var per = window.innerWidth < 768 ? 1 : Math.max(1, Math.floor(view / 260));
+    var single = root.classList.contains('iconlist') && window.innerWidth < 992;
+    var per = single || window.innerWidth < 768 ? 1 : Math.max(1, Math.floor(view / 260));
     var slideWidth = view / per;
     slides.forEach(function (slide) { slide.style.width = slideWidth + 'px'; });
     track.style.width = (slides.length * slideWidth) + 'px';

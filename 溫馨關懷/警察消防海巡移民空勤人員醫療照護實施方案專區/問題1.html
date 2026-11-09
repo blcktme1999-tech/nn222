@@ -502,7 +502,7 @@ if(!sub)return;
 event.preventDefault();
 var willOpen=!li.classList.contains("npa-open");
 var parent=li.parentElement;
-if(parent){Array.prototype.forEach.call(parent.children,function(sib){if(sib!==li){sib.classList.remove("npa-open");var sibUl=sib.querySelector(":scope>ul");if(sibUl)sibUl.classList.remove("npa-open");}});}
+if(parent && window.matchMedia("(min-width:992px)").matches){Array.prototype.forEach.call(parent.children,function(sib){if(sib!==li){sib.classList.remove("npa-open");var sibUl=sib.querySelector(":scope>ul");if(sibUl)sibUl.classList.remove("npa-open");}});}
 li.classList.toggle("npa-open",willOpen);
 sub.classList.toggle("npa-open",willOpen);
 },true);
@@ -544,9 +544,11 @@ sub.classList.toggle("npa-open",willOpen);
     if (button) button.addEventListener("click", function (event) {
       event.preventDefault();
       event.stopPropagation();
-      var order = ["font-medium", "font-large", "font-small"];
-      var current = holder.classList.contains("font-large") ? "font-large" : holder.classList.contains("font-small") ? "font-small" : "font-medium";
-      setFont(order[(order.indexOf(current) + 1) % order.length]);
+      var menu = holder.querySelector(".dropdown-menu");
+      if (!menu) return;
+      var open = menu.classList.contains("npa-open");
+      document.querySelectorAll("#sizefont .dropdown-menu").forEach(function (item) { item.classList.remove("npa-open"); });
+      if (!open) menu.classList.add("npa-open");
     });
   });
   document.addEventListener("click", function (event) {

@@ -464,9 +464,11 @@ Copyright (c) 2015 Daniel Eden
     if (button) button.addEventListener("click", function (event) {
       event.preventDefault();
       event.stopPropagation();
-      var order = ["font-medium", "font-large", "font-small"];
-      var current = holder.classList.contains("font-large") ? "font-large" : holder.classList.contains("font-small") ? "font-small" : "font-medium";
-      setFont(order[(order.indexOf(current) + 1) % order.length]);
+      var menu = holder.querySelector(".dropdown-menu");
+      if (!menu) return;
+      var open = menu.classList.contains("npa-open");
+      document.querySelectorAll("#sizefont .dropdown-menu").forEach(function (item) { item.classList.remove("npa-open"); });
+      if (!open) menu.classList.add("npa-open");
     });
   });
   document.addEventListener("click", function (event) {

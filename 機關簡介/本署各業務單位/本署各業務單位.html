@@ -56,7 +56,7 @@ Copyright (c) 2015 Daniel Eden
 @media(min-width:992px){
 .menu{height:auto!important;overflow:visible!important}
 .menu>ul>li{position:static}
-.menu>ul>li>ul,.menu>ul>li>ul.equal-height-thumbnail{position:absolute;left:0;top:100%;width:100%;max-height:calc(100vh - 120px)!important;overflow:auto!important;height:auto!important;background:#fff!important;z-index:100000;box-shadow:0 8px 18px rgba(0,0,0,.28)}
+.menu>ul>li>ul,.menu>ul>li>ul.equal-height-thumbnail{position:absolute;left:0;top:100%;width:100%;max-height:calc(100vh - 120px)!important;overflow:auto!important;height:auto!important;background:#fff!important;z-index:100000;box-shadow:0px 5px 11px 2px rgba(0,0,0,0.63)}
 .menu>ul>li>ul.equal-height-thumbnail{display:none;flex-wrap:wrap!important;align-items:flex-start;align-content:flex-start;padding:12px 8px}
 .menu>ul>li:hover>ul.equal-height-thumbnail,.menu>ul>li.npa-open>ul.equal-height-thumbnail{display:flex!important}
 .menu>ul>li>ul.equal-height-thumbnail>li{flex:0 0 25%;max-width:25%;min-width:0;box-sizing:border-box;padding:6px 8px;background:transparent}
@@ -78,11 +78,12 @@ a.menu-mobile{display:block!important}
 .menu>ul.npa-open>li{display:block;width:100%;float:none;background:#268726}
 .menu>ul.npa-open a::after{content:none!important}
 .menu>ul.npa-open li.npa-has-sub>a::after{content:"+"!important;position:absolute;right:16px;top:50%;transform:translateY(-50%);color:inherit}
-.menu>ul.npa-open li.npa-open>a::after{content:"–"!important}
 .menu>ul.npa-open li>ul{display:none!important}
-.menu>ul.npa-open li.npa-open>ul{display:block!important;position:static!important;width:100%!important;height:auto!important;max-height:none!important;overflow:visible!important;background:#fff!important;box-shadow:none!important;padding:0!important;margin:0!important}
+.menu>ul.npa-open li.npa-open>ul{display:block!important;position:static!important;width:100%!important;height:auto!important;max-height:none!important;overflow:visible!important;background:#fff!important;box-shadow:0px 5px 11px 2px rgba(0,0,0,0.63)!important;padding:0!important;margin:0!important}
 .menu>ul.npa-open li.npa-open>ul>li{display:block;width:100%;list-style:none;background:#fff}
 .menu>ul.npa-open>li>a{color:#fff!important;background:#268726!important;text-align:center!important}
+.menu>ul.npa-open>li.npa-open>a{background:#C15715!important;color:#fff!important}
+.menu>ul.npa-open li.npa-open>ul ul a::before{content:"- ";color:#222}
 .menu>ul.npa-open li.npa-open>ul a{color:#222!important;background:#fff!important;text-align:left!important;white-space:normal!important;font-size:16px;display:block!important;padding:12px 36px 12px 16px!important;border-bottom:1px solid #eee;pointer-events:auto}
 .menu>ul.npa-open li.npa-open>ul>li.npa-has-sub>a{font-weight:700}
 .menu>ul.npa-open li.npa-open>ul li.npa-open>ul a{font-weight:400;padding-left:28px!important}
@@ -178,7 +179,7 @@ a.menu-mobile{display:block!important}
  <li class=menu-dropdown-icon>
  <a href="../../%E7%B7%9A%E4%B8%8A%E7%94%B3%E8%BE%A6/%E7%B7%9A%E4%B8%8A%E7%94%B3%E8%BE%A6.html" title=線上申辦>
  線上申辦 </a>
- <ul class="equal-height-thumbnail sf-hidden"><li><a href="../../%E7%B7%9A%E4%B8%8A%E7%94%B3%E8%BE%A6/%E8%AD%A6%E5%AF%9F%E5%88%91%E4%BA%8B%E7%B4%80%E9%8C%84%E8%AD%89%E6%98%8E%EF%BC%88%E4%BF%97%E7%A8%B1%E8%89%AF%E6%B0%91%E8%AD%89%EF%BC%89/%E8%AD%A6%E5%AF%9F%E5%88%91%E4%BA%8B%E7%B4%80%E9%8C%84%E8%AD%89%E6%98%8E%EF%BC%88%E4%BF%97%E7%A8%B1%E8%89%AF%E6%B0%91%E8%AD%89%EF%BC%89.html" title=警察刑事紀錄證明（俗稱良民證）>警察刑事紀錄證明（俗稱良民證）</a><ul class=npa-sub><li><a href="../../%E7%B7%9A%E4%B8%8A%E7%94%B3%E8%BE%A6/%E8%AD%A6%E5%AF%9F%E5%88%91%E4%BA%8B%E7%B4%80%E9%8C%84%E8%AD%89%E6%98%8E%EF%BC%88%E4%BF%97%E7%A8%B1%E8%89%AF%E6%B0%91%E8%AD%89%EF%BC%89/%E8%AD%A6%E5%AF%9F%E5%88%91%E4%BA%8B%E7%B4%80%E9%8C%84%E8%AD%89%E6%98%8E%EF%BC%88%E4%BF%97%E7%A8%B1%E8%89%AF%E6%B0%91%E8%AD%89%EF%BC%89%E7%B7%9A%E4%B8%8A%E7%94%B3%E8%BE%A6.html" title="警察刑事紀錄證明（俗稱良民證）線上申辦">警察刑事紀錄證明（俗稱良民證）線上申辦</a></li></ul></li><li><a href="../../%E7%B7%9A%E4%B8%8A%E7%94%B3%E8%BE%A6/%E5%85%A5%E5%B1%B1%E6%A1%88%E4%BB%B6%E7%94%B3%E8%BE%A6%E7%B3%BB%E7%B5%B1.html" title=入山案件申辦系統(開啟新視窗)>入山案件申辦系統</a></li><li><a href="../../%E7%B7%9A%E4%B8%8A%E7%94%B3%E8%BE%A6/%E9%81%93%E8%B7%AF%E4%BA%A4%E9%80%9A%E4%BA%8B%E6%95%85%E8%B3%87%E6%96%99%E7%94%B3%E8%AB%8B%E7%B3%BB%E7%B5%B1.html" title=道路交通事故資料申請系統(開啟新視窗)>道路交通事故資料申請系統</a></li><li><a href="javascript:void(0)" title=槍砲彈藥簽審通關業務系統(開啟新視窗)>槍砲彈藥簽審通關業務系統</a></li></ul>
+ <ul class="equal-height-thumbnail sf-hidden"><li><a href="../../%E7%B7%9A%E4%B8%8A%E7%94%B3%E8%BE%A6/%E8%AD%A6%E5%AF%9F%E5%88%91%E4%BA%8B%E7%B4%80%E9%8C%84%E8%AD%89%E6%98%8E%EF%BC%88%E4%BF%97%E7%A8%B1%E8%89%AF%E6%B0%91%E8%AD%89%EF%BC%89/%E8%AD%A6%E5%AF%9F%E5%88%91%E4%BA%8B%E7%B4%80%E9%8C%84%E8%AD%89%E6%98%8E%EF%BC%88%E4%BF%97%E7%A8%B1%E8%89%AF%E6%B0%91%E8%AD%89%EF%BC%89.html" title=警察刑事紀錄證明（俗稱良民證）>警察刑事紀錄證明（俗稱良民證）</a><ul class=npa-sub><li><a href="../../%E7%B7%9A%E4%B8%8A%E7%94%B3%E8%BE%A6/%E8%AD%A6%E5%AF%9F%E5%88%91%E4%BA%8B%E7%B4%80%E9%8C%84%E8%AD%89%E6%98%8E%EF%BC%88%E4%BF%97%E7%A8%B1%E8%89%AF%E6%B0%91%E8%AD%89%EF%BC%89/%E7%94%B3%E8%BE%A6.html" title="警察刑事紀錄證明（俗稱良民證）線上申辦">警察刑事紀錄證明（俗稱良民證）線上申辦</a></li></ul></li><li><a href="../../%E7%B7%9A%E4%B8%8A%E7%94%B3%E8%BE%A6/%E5%85%A5%E5%B1%B1%E6%A1%88%E4%BB%B6%E7%94%B3%E8%BE%A6%E7%B3%BB%E7%B5%B1.html" title=入山案件申辦系統(開啟新視窗)>入山案件申辦系統</a></li><li><a href="../../%E7%B7%9A%E4%B8%8A%E7%94%B3%E8%BE%A6/%E9%81%93%E8%B7%AF%E4%BA%A4%E9%80%9A%E4%BA%8B%E6%95%85%E8%B3%87%E6%96%99%E7%94%B3%E8%AB%8B%E7%B3%BB%E7%B5%B1.html" title=道路交通事故資料申請系統(開啟新視窗)>道路交通事故資料申請系統</a></li><li><a href="javascript:void(0)" title=槍砲彈藥簽審通關業務系統(開啟新視窗)>槍砲彈藥簽審通關業務系統</a></li></ul>
  </li>
  <li class=menu-dropdown-icon>
  <a href="javascript:void(0)" title=便民服務>
@@ -759,7 +760,7 @@ if(!sub)return;
 event.preventDefault();
 var willOpen=!li.classList.contains("npa-open");
 var parent=li.parentElement;
-if(parent){Array.prototype.forEach.call(parent.children,function(sib){if(sib!==li){sib.classList.remove("npa-open");var sibUl=sib.querySelector(":scope>ul");if(sibUl)sibUl.classList.remove("npa-open");}});}
+if(parent && window.matchMedia("(min-width:992px)").matches){Array.prototype.forEach.call(parent.children,function(sib){if(sib!==li){sib.classList.remove("npa-open");var sibUl=sib.querySelector(":scope>ul");if(sibUl)sibUl.classList.remove("npa-open");}});}
 li.classList.toggle("npa-open",willOpen);
 sub.classList.toggle("npa-open",willOpen);
 },true);
@@ -801,9 +802,11 @@ sub.classList.toggle("npa-open",willOpen);
     if (button) button.addEventListener("click", function (event) {
       event.preventDefault();
       event.stopPropagation();
-      var order = ["font-medium", "font-large", "font-small"];
-      var current = holder.classList.contains("font-large") ? "font-large" : holder.classList.contains("font-small") ? "font-small" : "font-medium";
-      setFont(order[(order.indexOf(current) + 1) % order.length]);
+      var menu = holder.querySelector(".dropdown-menu");
+      if (!menu) return;
+      var open = menu.classList.contains("npa-open");
+      document.querySelectorAll("#sizefont .dropdown-menu").forEach(function (item) { item.classList.remove("npa-open"); });
+      if (!open) menu.classList.add("npa-open");
     });
   });
   document.addEventListener("click", function (event) {

@@ -460,7 +460,7 @@ sub.classList.toggle("npa-open",willOpen);
 </script><script id=npa-tools>
 (function () {
   var style = document.createElement("style");
-  style.textContent = ".main.font-small{font-size:90%}.main.font-large{font-size:105%}.setweb .size{position:relative}.setweb .size .dropdown-menu{position:absolute;right:0;top:100%;z-index:10000;min-width:46px;margin:0;padding:0;background:#d40418;border:0}.setweb .size .dropdown-menu.npa-open{display:block!important}.setweb .size .dropdown-menu a{display:block;color:#fff;background:#d40418;text-align:center;font-weight:700;font-size:20px;line-height:1;padding:10px 8px;text-decoration:none}.setweb .size .dropdown-menu a:hover{background:#E90C0C;color:#fff}";
+  style.textContent = ".main.font-small{font-size:90%}.main.font-large{font-size:105%}.setweb .size{position:relative}.setweb .size .dropdown-menu{display:none!important;position:absolute;right:0;top:100%;z-index:10000;min-width:46px;margin:0;padding:0;background:#d40418;border:0}.setweb .size .dropdown-menu.npa-open{display:block!important}.setweb .size .dropdown-menu a{display:block;color:#fff;background:#d40418;text-align:center;font-weight:700;font-size:20px;line-height:1;padding:10px 8px;text-decoration:none}.setweb .size .dropdown-menu a:hover{background:#E90C0C;color:#fff}";
   document.head.appendChild(style);
   function setFont(size) {
     var box = document.getElementById("fs");
@@ -485,6 +485,7 @@ sub.classList.toggle("npa-open",willOpen);
         link.textContent = item[1];
         link.addEventListener("click", function (event) {
           event.preventDefault();
+          event.stopPropagation();
           setFont(item[0]);
         });
         menu.appendChild(link);

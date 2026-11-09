@@ -567,4 +567,69 @@ if(parent){Array.prototype.forEach.call(parent.children,function(sib){if(sib!==l
 li.classList.toggle("npa-open",willOpen);
 sub.classList.toggle("npa-open",willOpen);
 },true);
+</script><script id=npa-tools>
+(function () {
+  var style = document.createElement("style");
+  style.textContent = ".main.font-small{font-size:90%}.main.font-large{font-size:105%}.setweb .size{position:relative}.setweb .size .dropdown-menu{position:absolute;right:0;top:100%;z-index:10000;min-width:46px;margin:0;padding:0;background:#d40418;border:0}.setweb .size .dropdown-menu.npa-open{display:block!important}.setweb .size .dropdown-menu a{display:block;color:#fff;background:#d40418;text-align:center;font-weight:700;font-size:20px;line-height:1;padding:10px 8px;text-decoration:none}.setweb .size .dropdown-menu a:hover{background:#E90C0C;color:#fff}";
+  document.head.appendChild(style);
+  function setFont(size) {
+    var box = document.getElementById("fs");
+    var holder = document.getElementById("sizefont");
+    if (box) box.className = "container main " + size;
+    if (holder) holder.className = "size " + size;
+    try { localStorage.setItem("npa-fontsize", size); } catch (error) {}
+    var menu = holder && holder.querySelector(".dropdown-menu");
+    if (menu) menu.classList.remove("npa-open");
+  }
+  var saved = "font-medium";
+  try { saved = localStorage.getItem("npa-fontsize") || saved; } catch (error) {}
+  if (document.getElementById("fs")) setFont(saved);
+  document.querySelectorAll("#sizefont").forEach(function (holder) {
+    var menu = holder.querySelector(".dropdown-menu");
+    if (menu && !menu.querySelector("a")) {
+      menu.classList.remove("sf-hidden");
+      [["font-small", "A-"], ["font-medium", "A"], ["font-large", "A+"]].forEach(function (item) {
+        var link = document.createElement("a");
+        link.href = "javascript:void(0)";
+        link.className = "dropdown-item";
+        link.textContent = item[1];
+        link.addEventListener("click", function (event) {
+          event.preventDefault();
+          setFont(item[0]);
+        });
+        menu.appendChild(link);
+      });
+    }
+    var button = holder.querySelector("button");
+    if (button) button.addEventListener("click", function (event) {
+      event.preventDefault();
+      event.stopPropagation();
+      if (menu) menu.classList.toggle("npa-open");
+    });
+  });
+  document.addEventListener("click", function (event) {
+    if (event.target.closest && event.target.closest("#sizefont")) return;
+    document.querySelectorAll("#sizefont .dropdown-menu").forEach(function (menu) {
+      menu.classList.remove("npa-open");
+    });
+  });
+  function search(form) {
+    var input = form.querySelector("input[type=text], input.gsc-input");
+    var query = input ? input.value.trim() : "";
+    if (!query) return;
+    window.open("https://www.google.com.tw/cse?cx=7189beac72d8cef5c&hl=zh-TW&as_sitesearch=https://www.npa.gov.tw/&q=" + encodeURIComponent(query), "_blank", "noopener");
+  }
+  document.querySelectorAll("form.gsc-search-box").forEach(function (form) {
+    form.addEventListener("submit", function (event) {
+      event.preventDefault();
+      search(form);
+    });
+    form.querySelectorAll("button").forEach(function (button) {
+      button.addEventListener("click", function (event) {
+        event.preventDefault();
+        search(form);
+      });
+    });
+  });
+})();
 </script>

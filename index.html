@@ -118,13 +118,15 @@ a.menu-mobile{display:block!important}
 .sbanner .slick-list,.slider_icon .iconlist .slick-list{overflow:hidden}
 .sbanner .slick-slide{display:flex!important;align-items:center;justify-content:center}
 .sbanner .slick-slide img{width:240px!important;max-width:none!important;height:90px!important;flex:0 0 auto}
-.slider_icon .iconlist .slick-slide img{width:195px!important;height:195px!important;max-width:100%!important;object-fit:contain;margin:0 auto}
+.slider_icon .iconlist .slick-slide img{width:100%!important;height:auto!important;max-width:none!important;object-fit:contain;margin:0 auto}
 @media (max-width:1199px){
   .center_frame,body .center_frame{max-height:none!important;height:auto!important;overflow:visible!important}
   body .center,body .center_frame .center{display:block!important}
 }
 @media (max-width:992px){
-  .fold>a.btn,.fold>a.btn.sf-hidden{display:block!important}
+  .fold>a.btn,.fold>a.btn.sf-hidden{display:block!important;z-index:20;pointer-events:auto}
+  #topleft.collapse:not(.show){display:none!important}
+  .fold.is-closed>a.btn::before{transform:rotate(-135deg) translate(30%,-20%)!important}
 }
 </style></head>
 <body data-0="background-position:center 0px;" data-100000="background-position:center -50000px;" class="ch skrollable skrollable-between" style="background-position:center 0px">
@@ -915,7 +917,12 @@ document.querySelectorAll('.slick-initialized').forEach(function (root) {
     if (!root.classList.contains('sbanner') && !root.classList.contains('iconlist')) return;
     var view = list.clientWidth || root.clientWidth;
     if (!view) return;
-    var slideWidth = root.classList.contains('iconlist') ? Math.min(195, view) : view;
+    var per = 1;
+    if (root.classList.contains('iconlist')) {
+      var w = window.innerWidth;
+      per = w < 425 ? 1 : w < 767 ? 2 : w < 992 ? 3 : w < 1200 ? 4 : 5;
+    }
+    var slideWidth = view / per;
     slides.forEach(function (slide) { slide.style.width = slideWidth + 'px'; });
     track.style.width = (slides.length * slideWidth) + 'px';
     var firstReal = 0;
@@ -1028,6 +1035,7 @@ document.querySelectorAll('.fold > a.btn').forEach(function (btn) {
     event.preventDefault();
     var open = panel.classList.toggle('show');
     btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    if (btn.parentElement) btn.parentElement.classList.toggle('is-closed', !open);
   });
 });
 </script><script id=npa-news-tabs>

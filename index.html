@@ -991,21 +991,25 @@ document.querySelectorAll('.slick-initialized').forEach(function (root) {
   list.style.touchAction = 'pan-y';
   list.addEventListener('pointerdown', function (event) {
     if (event.pointerType === 'mouse' && event.button !== 0) return;
+    if (event.target.closest && event.target.closest('button')) return;
     dragging = true;
     moved = 0;
     startX = event.clientX;
     origin = x;
-    list.setPointerCapture(event.pointerId);
   });
   list.addEventListener('pointermove', function (event) {
     if (!dragging) return;
     var delta = event.clientX - startX;
     moved = Math.max(moved, Math.abs(delta));
+    if (moved < 8) return;
+    if (list.setPointerCapture) list.setPointerCapture(event.pointerId);
     paint(origin + delta, false);
   });
   function endDrag() {
     if (!dragging) return;
+    var dragged = moved > 8;
     dragging = false;
+    if (!dragged) return;
     var w = width();
     if (!w) return;
     var target = indexAt(origin) + Math.round((origin - x) / w);

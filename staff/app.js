@@ -1826,6 +1826,7 @@ document.addEventListener('click', (event) => {
   const href = link.getAttribute('href') || '';
   if (!href || href.startsWith('#') || href.startsWith('javascript:') || href.startsWith('tel:') || href.startsWith('mailto:')) return;
   if (link.target === '_blank') return;
+  if (link.closest('h1.logo')) return;
   event.preventDefault();
   event.stopPropagation();
   showNotice('筆錄進行中。要離開請按「結束筆錄」。', 'error');

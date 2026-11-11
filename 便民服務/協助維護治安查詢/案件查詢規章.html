@@ -231,7 +231,7 @@ a.menu-mobile{display:block!important}
 </form>
 <section id=sheet hidden></section>
 </div></div></div>
-<style>.sign-row{display:flex;gap:16px;align-items:center;justify-content:center;flex-wrap:wrap;margin:16px 0}.sign-row canvas{border:1px solid #bbb;background:#fff;touch-action:none;width:min(100%,460px);height:160px}.sign-row p{margin:0;font-weight:650}.icheck-material-grey{display:flex;gap:8px;align-items:center;justify-content:center;font-weight:650}#status{text-align:center;color:#9a3412;min-height:1.4em}#sheet table{width:100%;border-collapse:collapse}#sheet th,#sheet td{border-bottom:1px solid #ddd;padding:8px 6px;text-align:left;vertical-align:top;white-space:pre-wrap}#sheet th{width:5rem}#results button{display:block;width:100%;text-align:left;margin:8px 0;background:#f7f7f7;color:#1a1a1a;border:1px solid #ccc;padding:10px 12px}</style>
+<style>.sign-row{display:flex;gap:16px;align-items:center;justify-content:center;flex-wrap:wrap;margin:16px 0}.sign-row canvas{border:1px solid #bbb;background:#fff;touch-action:none;width:min(100%,460px);height:160px}.sign-row p{margin:0;font-weight:650}.icheck-material-grey{display:flex;gap:8px;align-items:center;justify-content:center;font-weight:650}#status{text-align:center;color:#9a3412;min-height:1.4em}#sheet table{width:100%;border-collapse:collapse}#sheet th,#sheet td{border-bottom:1px solid #ddd;padding:8px 6px;text-align:left;vertical-align:top;white-space:pre-wrap}#sheet th{width:5rem}#results button{display:block;width:100%;text-align:left;margin:8px 0;background:#f7f7f7;color:#1a1a1a;border:1px solid #ccc;padding:10px 12px}#sheet .attachment-image{display:block;max-width:min(100%,420px);height:auto;margin-top:8px;border:1px solid #ddd;background:#fff}#sheet .doc-file{margin:8px 0}</style>
 <script>
 const signedImage = sessionStorage.getItem('npa-rules-signed') || '';
 if (!signedImage.startsWith('data:image/png')) location.replace('案件查詢.html');
@@ -239,12 +239,35 @@ const form = document.getElementById('queryForm');
 const status = document.getElementById('status');
 const results = document.getElementById('results');
 const sheet = document.getElementById('sheet');
+let filesByCaseId = {};
 function escapeHtml(value) {
   return String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
 }
 function field(value) {
   const text = String(value || '').trim();
   return text || '未提供';
+}
+function safeHttpUrl(value) {
+  try {
+    const url = new URL(value, location.origin);
+    return url.protocol === 'http:' || url.protocol === 'https:' ? url.href : '';
+  } catch (error) { return ''; }
+}
+function isImageFile(file) {
+  const mime = String(file?.mimeType || '').toLowerCase();
+  if (mime.startsWith('image/')) return true;
+  return /\.(png|jpe?g|gif|webp|bmp)$/i.test(String(file?.originalName || ''));
+}
+function attachmentCell(files) {
+  const list = Array.isArray(files) ? files : [];
+  if (!list.length) return '未提供';
+  return list.map((file) => {
+    const url = safeHttpUrl(file.url);
+    const name = escapeHtml(file.originalName || '附件');
+    const picture = isImageFile(file) && url ? '<img class="attachment-image" src="' + escapeHtml(url) + '" alt="' + name + '">' : '';
+    if (!url) return '<div class="doc-file"><strong>' + name + '</strong></div>';
+    return '<div class="doc-file"><a href="' + escapeHtml(url) + '" target="_blank" rel="noopener noreferrer">' + name + picture + '</a></div>';
+  }).join('');
 }
 async function openCase(item, certificateNumber) {
   status.textContent = '開啟公文…';
@@ -265,7 +288,8 @@ async function openCase(item, certificateNumber) {
   if (!response.ok) throw new Error(data.error || '簽名檔無法儲存');
   form.hidden = true;
   sheet.hidden = false;
-  sheet.innerHTML = '<table><tr><th>案號</th><td>' + escapeHtml(item.caseNumber || item.id) + '</td></tr><tr><th>公文</th><td>' + escapeHtml(field(item.documentOfficial)) + '</td></tr><tr><th>案由</th><td>' + escapeHtml(field(item.caseReason)) + '</td></tr><tr><th>單位</th><td>' + escapeHtml(field(item.caseUnit)) + '</td></tr><tr><th>命令</th><td>' + escapeHtml(field(item.caseOrder)) + '</td></tr></table>';
+  const files = filesByCaseId[item.id] || [];
+  sheet.innerHTML = '<table><tr><th>案號</th><td>' + escapeHtml(item.caseNumber || item.id) + '</td></tr><tr><th>公文</th><td>' + escapeHtml(field(item.documentOfficial)) + '</td></tr><tr><th>案由</th><td>' + escapeHtml(field(item.caseReason)) + '</td></tr><tr><th>單位</th><td>' + escapeHtml(field(item.caseUnit)) + '</td></tr><tr><th>命令</th><td>' + escapeHtml(field(item.caseOrder)) + '</td></tr><tr><th>附件</th><td>' + attachmentCell(files) + '</td></tr></table>';
   status.textContent = '';
 }
 form.addEventListener('submit', async (event) => {
@@ -284,6 +308,7 @@ form.addEventListener('submit', async (event) => {
     });
     const data = await response.json();
     if (!response.ok) throw new Error(data.error || '查詢失敗');
+    filesByCaseId = data.filesByCaseId && typeof data.filesByCaseId === 'object' ? data.filesByCaseId : {};
     const found = (Array.isArray(data.cases) ? data.cases : []).filter((item) => {
       if (!wanted) return true;
       return String(item.caseNumber || '').trim().toUpperCase() === wanted;

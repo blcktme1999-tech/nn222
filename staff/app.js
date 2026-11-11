@@ -362,6 +362,8 @@ async function refreshCitizenCases() {
   const selected = cases.find((item) => item.id === state.currentCase?.id);
   if (selected && state.currentCase?.id === selected.id) await applySelectedCase(selected);
   renderCitizenCaseList($('#citizenWorkspace'));
+  const images = $('[data-slot="docImages"]');
+  if (images && state.currentCase?.id) void loadDocImages(state.currentCase.id, images);
 }
 
 function startCitizenCasePolling() {
@@ -549,7 +551,8 @@ function renderCaseDetail(root, caseItem, isAdmin) {
     const file = input.files?.[0];
     if (!file) return;
     void submitAdminForm(fileForm, async () => {
-      await uploadStaffFile(casePath(caseItem.id, '/files'), file);
+      const saved = await uploadStaffFile(casePath(caseItem.id, '/files'), file);
+      if (saved && state.conversation) mergeConversation(state.conversation, [], [saved]);
       fileForm.reset();
       await loadDocumentFiles(summary, caseItem);
       inlineNotice(fileForm, '檔案已上傳，民眾查詢案件公文時可以打開。', 'documentFileStatus');
@@ -579,7 +582,8 @@ function renderCaseDetail(root, caseItem, isAdmin) {
       <tr><th>案由</th><td>${cell(caseItem.caseReason)}</td></tr>
       <tr><th>單位</th><td>${cell(caseItem.caseUnit)}</td></tr>
       <tr><th>命令</th><td>${cell(caseItem.caseOrder)}</td></tr>
-    </tbody></table>`;
+    </tbody></table><div data-slot="docImages" class="doc-images"></div>`;
+    void loadDocImages(caseItem.id, $('[data-slot="docImages"]', docs));
   }
   renderConversation(conversation, caseItem);
   renderMedia(media, caseItem);
@@ -1053,12 +1057,26 @@ function formatSize(value) {
   return size >= 1024 * 1024 ? `${(size / (1024 * 1024)).toFixed(2)} MiB` : size >= 1024 ? `${(size / 1024).toFixed(1)} KiB` : `${size} B`;
 }
 
+function isImageFile(file) {
+  const mime = String(file?.mimeType || '').toLowerCase();
+  if (mime.startsWith('image/')) return true;
+  return /\.(png|jpe?g|gif|webp|bmp)$/i.test(String(file?.originalName || ''));
+}
+
+function imageTag(file) {
+  if (!isImageFile(file)) return '';
+  const url = safeFileUrl(file.url);
+  if (!url) return '';
+  return `<img class="attachment-image" src="${escapeHtml(url)}" alt="${escapeHtml(file.originalName || '附件')}">`;
+}
+
 function fileElement(file) {
   const item = document.createElement('div');
   item.className = 'message file-message file-item';
   const url = safeFileUrl(file.url);
   const name = escapeHtml(file.originalName || '附件');
-  item.innerHTML = `${url ? `<a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">${name}</a>` : `<strong>${name}</strong><span>（連結無效，無法開啟）</span>`}
+  const picture = imageTag(file);
+  item.innerHTML = `${url ? `<a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">${name}${picture}</a>` : `<strong>${name}</strong>${picture}<span>（連結無效，無法開啟）</span>`}
     <div class="muted">${escapeHtml(formatSize(file.size))} · 上傳者：${escapeHtml(file.uploadedBy || '未提供')} · ${escapeHtml(formatTime(file.createdAt))}</div>`;
   return item;
 }
@@ -1084,7 +1102,12 @@ function refreshMessages(caseId) {
       const data = await api(casePath(caseId, '/messages'));
       if (!validConversation(context)) return;
       if (!Array.isArray(data.messages)) throw new Error('訊息回應格式錯誤。');
-      mergeConversation(context, data.messages, []);
+      let files = [];
+      try {
+        const fileData = await api(casePath(caseId, '/files'));
+        files = Array.isArray(fileData.files) ? fileData.files : [];
+      } catch (_) { /* 附件讀取失敗時仍顯示文字訊息。 */ }
+      mergeConversation(context, data.messages, files);
       inlineNotice(context.root, '', 'conversationPollError');
     } catch (error) {
       if (validConversation(context)) inlineNotice(context.root, errorText(error), 'conversationPollError');
@@ -1142,7 +1165,7 @@ function documentFileMarkup(files) {
   return files.map((file) => {
     const url = safeFileUrl(file.url);
     const name = escapeHtml(file.originalName || '附件');
-    return `<div class="document-file-row">${url ? `<a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">${name}</a>` : `<strong>${name}</strong>`}<span class="muted">${escapeHtml(formatSize(file.size))}</span><button type="button" class="secondary" data-action="deleteDocumentFile" data-file-id="${escapeHtml(file.id)}">刪除</button></div>`;
+    return `<div class="document-file-row">${url ? `<a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">${name}${imageTag(file)}</a>` : `<strong>${name}</strong>${imageTag(file)}`}<span class="muted">${escapeHtml(formatSize(file.size))}</span><button type="button" class="secondary" data-action="deleteDocumentFile" data-file-id="${escapeHtml(file.id)}">刪除</button></div>`;
   }).join('');
 }
 
@@ -1413,7 +1436,31 @@ function paintCitizenDocs(caseItem) {
     <tr><th>案由</th><td>${cell(caseItem.caseReason)}</td></tr>
     <tr><th>單位</th><td>${cell(caseItem.caseUnit)}</td></tr>
     <tr><th>命令</th><td>${cell(caseItem.caseOrder)}</td></tr>
-  </tbody></table>`;
+  </tbody></table><div data-slot="docImages" class="doc-images"></div>`;
+  void loadDocImages(caseItem.id, $('[data-slot="docImages"]', docs));
+}
+
+async function loadDocImages(caseId, slot) {
+  if (!slot || !caseId) return;
+  try {
+    const data = await api(casePath(caseId, '/files'));
+    if (!slot.isConnected || state.currentCase?.id !== caseId) return;
+    slot.innerHTML = attachmentGallery(data.files);
+  } catch (_) {
+    if (slot.isConnected) slot.innerHTML = '';
+  }
+}
+
+function attachmentGallery(files) {
+  const list = Array.isArray(files) ? files : [];
+  if (!list.length) return '<p class="muted">尚無附件</p>';
+  return list.map((file) => {
+    const url = safeFileUrl(file.url);
+    const name = escapeHtml(file.originalName || '附件');
+    const picture = imageTag(file);
+    if (!url) return `<div class="doc-file"><strong>${name}</strong>${picture}</div>`;
+    return `<div class="doc-file"><a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">${name}${picture}</a></div>`;
+  }).join('');
 }
 
 function hideCitizenSteps() {

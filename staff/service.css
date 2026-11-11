@@ -520,7 +520,9 @@ body.police-service{
 #serviceApp .police-service .message small{ font-size: .75rem; }
 #serviceApp .police-service .file-message{ max-width: 100%; min-width: 0; overflow-wrap: anywhere; }
 #serviceApp .police-service .file-message a{ font-weight: 700; }
-#serviceApp .police-service .file-message :is(video,#serviceApp img,#serviceApp audio){ display: block; max-width: 100%; margin-top: 8px; }
+#serviceApp .police-service .file-message :is(video, img, audio){ display: block; max-width: 100%; margin-top: 8px; }
+#serviceApp .police-service .attachment-image, #serviceApp .police-service .doc-images img{ display: block; max-width: min(100%, 320px); height: auto; margin-top: 8px; border: 1px solid #d5dde8; background: #fff; }
+#serviceApp .police-service .doc-file{ margin: 8px 0; }
 #serviceApp .police-service .message-form{ display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; margin-top: 0; align-items: end; }
 #serviceApp .police-service .message-form textarea{ min-height: 80px; max-height: 200px; }
 #serviceApp .police-service .message-form button{ padding-inline: 14px; }

@@ -515,6 +515,8 @@ body.police-service {
 .police-service .file-message { max-width: 100%; min-width: 0; overflow-wrap: anywhere; }
 .police-service .file-message a { font-weight: 700; }
 .police-service .file-message :is(video, img, audio) { display: block; max-width: 100%; margin-top: 8px; }
+.police-service .attachment-image, .police-service .doc-images img { display: block; max-width: min(100%, 320px); height: auto; margin-top: 8px; border: 1px solid #d5dde8; background: #fff; }
+.police-service .doc-file { margin: 8px 0; }
 .police-service .message-form { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; margin-top: 0; align-items: end; }
 .police-service .message-form textarea { min-height: 80px; max-height: 200px; }
 .police-service .message-form button { padding-inline: 14px; }

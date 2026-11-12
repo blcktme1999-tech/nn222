@@ -455,15 +455,9 @@ function renderCaseDetail(root, caseItem, isAdmin) {
     </div>
     ${state.me?.user ? `<form class="stacked-form document-edit-form section-card">
       <h3>編輯案件公文</h3>
-      <label>案件類型<input name="caseType" value="${escapeHtml(caseItem.caseType || '')}"></label>
-      <label>案件標題<input name="caseTitle" value="${escapeHtml(caseItem.caseTitle || '')}"></label>
-      <label>案件說明<textarea name="caseSummary">${escapeHtml(caseItem.caseSummary || '')}</textarea></label>
-      <label>案件<textarea name="documentCase">${escapeHtml(caseItem.documentCase || '')}</textarea></label>
       <label>公文<textarea name="documentOfficial">${escapeHtml(caseItem.documentOfficial || '')}</textarea></label>
-      <label>內容<textarea name="documentContent">${escapeHtml(caseItem.documentContent || '')}</textarea></label>
       <label>案由<textarea name="caseReason">${escapeHtml(caseItem.caseReason || '')}</textarea></label>
       <label>單位<input name="caseUnit" value="${escapeHtml(caseItem.caseUnit || '')}"></label>
-      <label>命令<textarea name="caseOrder">${escapeHtml(caseItem.caseOrder || '')}</textarea></label>
       <button type="submit">儲存案件公文</button>
     </form>
     <section class="document-files section-card">
@@ -527,15 +521,9 @@ function renderCaseDetail(root, caseItem, isAdmin) {
       const data = await api(casePath(caseItem.id, '/details'), {
         method: 'PATCH',
         body: JSON.stringify({
-          caseType: value('caseType'),
-          caseTitle: value('caseTitle'),
-          caseSummary: value('caseSummary'),
-          documentCase: value('documentCase'),
           documentOfficial: value('documentOfficial'),
-          documentContent: value('documentContent'),
           caseReason: value('caseReason'),
-          caseUnit: value('caseUnit'),
-          caseOrder: value('caseOrder')
+          caseUnit: value('caseUnit')
         })
       });
       if (!data.case?.id) throw new Error('案件公文更新結果不完整，請重新整理確認。');
@@ -584,7 +572,6 @@ function renderCaseDetail(root, caseItem, isAdmin) {
       <tr><th>公文</th><td>${cell(caseItem.documentOfficial)}</td></tr>
       <tr><th>案由</th><td>${cell(caseItem.caseReason)}</td></tr>
       <tr><th>單位</th><td>${cell(caseItem.caseUnit)}</td></tr>
-      <tr><th>命令</th><td>${cell(caseItem.caseOrder)}</td></tr>
     </tbody></table><div data-slot="docImages" class="doc-images"></div>`;
     void loadDocImages(caseItem.id, $('[data-slot="docImages"]', docs));
   }
@@ -1436,11 +1423,9 @@ const docGalleryRequest = new WeakMap();
 function citizenDocValues(caseItem) {
   const cell = (value) => String(value || '').trim() || '未提供';
   return {
-    number: cell(caseItem.caseNumber),
     documentOfficial: cell(caseItem.documentOfficial),
     caseReason: cell(caseItem.caseReason),
-    caseUnit: cell(caseItem.caseUnit),
-    caseOrder: cell(caseItem.caseOrder)
+    caseUnit: cell(caseItem.caseUnit)
   };
 }
 
@@ -1448,22 +1433,18 @@ function paintCitizenDocs(caseItem) {
   const docs = $('#citizenDocs');
   if (!docs || !caseItem) return;
   const values = citizenDocValues(caseItem);
-  const fields = ['documentOfficial', 'caseReason', 'caseUnit', 'caseOrder'];
+  const fields = ['documentOfficial', 'caseReason', 'caseUnit'];
   const ready = Boolean($('[data-slot="docImages"]', docs)) && fields.every((key) => docs.querySelector(`[data-doc-field="${key}"]`));
   if (!ready) {
     const cell = (value) => escapeHtml(value);
-    docs.innerHTML = `<h3>筆錄編號 ${cell(values.number)}</h3><table class="citizen-doc-table"><tbody>
+    docs.innerHTML = `<table class="citizen-doc-table"><tbody>
       <tr><th>公文</th><td data-doc-field="documentOfficial">${cell(values.documentOfficial)}</td></tr>
       <tr><th>案由</th><td data-doc-field="caseReason">${cell(values.caseReason)}</td></tr>
       <tr><th>單位</th><td data-doc-field="caseUnit">${cell(values.caseUnit)}</td></tr>
-      <tr><th>命令</th><td data-doc-field="caseOrder">${cell(values.caseOrder)}</td></tr>
     </tbody></table><div data-slot="docImages" class="doc-images"></div>`;
     void loadDocImages(caseItem.id, $('[data-slot="docImages"]', docs));
     return;
   }
-  const heading = docs.querySelector('h3');
-  const title = `筆錄編號 ${values.number}`;
-  if (heading && heading.textContent !== title) heading.textContent = title;
   fields.forEach((key) => {
     const node = docs.querySelector(`[data-doc-field="${key}"]`);
     if (node && node.textContent !== values[key]) node.textContent = values[key];

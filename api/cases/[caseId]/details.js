@@ -7,17 +7,23 @@ async function handler(req, res) {
     if (!session) return;
     const client = getSupabase();
     const body = await getJsonBody(req);
-    const updated = await client.from('service_cases').update({
-      case_type: String(body.caseType || '').trim(),
-      case_title: String(body.caseTitle || '').trim(),
-      case_summary: String(body.caseSummary || '').trim(),
-      document_case: String(body.documentCase || '').trim(),
-      document_official: String(body.documentOfficial || '').trim(),
-      document_content: String(body.documentContent || '').trim(),
-      case_reason: String(body.caseReason || '').trim(),
-      case_unit: String(body.caseUnit || '').trim(),
-      case_order: String(body.caseOrder || '').trim()
-    }).eq('id', req.query.caseId).select('*').single();
+    const columnByField = {
+      caseType: 'case_type',
+      caseTitle: 'case_title',
+      caseSummary: 'case_summary',
+      documentCase: 'document_case',
+      documentOfficial: 'document_official',
+      documentContent: 'document_content',
+      caseReason: 'case_reason',
+      caseUnit: 'case_unit',
+      caseOrder: 'case_order'
+    };
+    const patch = {};
+    for (const [field, column] of Object.entries(columnByField)) {
+      if (Object.prototype.hasOwnProperty.call(body, field)) patch[column] = String(body[field] || '').trim();
+    }
+    if (!Object.keys(patch).length) return json(res, 400, { error: '沒有要更新的欄位' });
+    const updated = await client.from('service_cases').update(patch).eq('id', req.query.caseId).select('*').single();
     if (updated.error) throw updated.error;
     json(res, 200, { case: publicCase(updated.data) });
   } catch (error) {

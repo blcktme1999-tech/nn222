@@ -1426,9 +1426,17 @@ async function renderPriorityApplicationList() {
 let citizenLookup = null;
 let interviewPad = null;
 
+const docGalleryMarkup = new WeakMap();
+const docGalleryRequest = new WeakMap();
+
 function paintCitizenDocs(caseItem) {
   const docs = $('#citizenDocs');
   if (!docs || !caseItem) return;
+  const signature = [caseItem.id, caseItem.caseNumber, caseItem.documentOfficial, caseItem.caseReason, caseItem.caseUnit, caseItem.caseOrder]
+    .map((value) => String(value ?? '').trim())
+    .join('\u0001');
+  if (docs.dataset.docSignature === signature && $('[data-slot="docImages"]', docs)) return;
+  docs.dataset.docSignature = signature;
   const cell = (value) => escapeHtml(String(value || '').trim() || '未提供');
   const number = String(caseItem.caseNumber || '').trim() || '未提供';
   docs.innerHTML = `<h3>筆錄編號 ${escapeHtml(number)}</h3><table class="citizen-doc-table"><tbody>
@@ -1442,12 +1450,17 @@ function paintCitizenDocs(caseItem) {
 
 async function loadDocImages(caseId, slot) {
   if (!slot || !caseId) return;
+  const requestId = (docGalleryRequest.get(slot) || 0) + 1;
+  docGalleryRequest.set(slot, requestId);
   try {
     const data = await api(casePath(caseId, '/files'));
-    if (!slot.isConnected || state.currentCase?.id !== caseId) return;
-    slot.innerHTML = attachmentGallery(data.files);
+    if (!slot.isConnected || state.currentCase?.id !== caseId || docGalleryRequest.get(slot) !== requestId) return;
+    const markup = attachmentGallery(data.files);
+    if (docGalleryMarkup.get(slot) === markup) return;
+    docGalleryMarkup.set(slot, markup);
+    slot.innerHTML = markup;
   } catch (_) {
-    if (slot.isConnected) slot.innerHTML = '';
+    /* 讀取失敗時保留畫面上的附件，避免「尚無附件」被清成空白後又出現。 */
   }
 }
 

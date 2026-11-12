@@ -354,14 +354,17 @@ function renderCitizenCaseList(root = $('#citizenWorkspace')) {
 }
 
 async function refreshCitizenCases() {
-  if (state.me?.user || !state.me?.case) return;
+  if (state.me?.user) return;
+  const docsOpen = Boolean($('#citizenDocs')?.isConnected);
+  if (!docsOpen && !state.me?.case) return;
   const session = await api('/api/me');
-  const cases = Array.isArray(session.cases) && session.cases.length ? session.cases : session.case ? [session.case] : [];
-  state.citizenCases = cases;
-  state.me = session;
-  const selected = cases.find((item) => item.id === state.currentCase?.id);
-  if (selected && state.currentCase?.id === selected.id) await applySelectedCase(selected);
-  renderCitizenCaseList($('#citizenWorkspace'));
+  const listed = Array.isArray(session.cases) ? session.cases : [];
+  state.citizenCases = listed.length ? listed : session.case ? [session.case] : [];
+  if (session.case || session.user) state.me = session;
+  const currentId = state.currentCase?.id;
+  const fresh = [session.case, ...listed].find((item) => item && String(item.id) === String(currentId)) || (!currentId ? session.case : null);
+  if (fresh) await applySelectedCase(fresh);
+  if (!docsOpen) renderCitizenCaseList($('#citizenWorkspace'));
   const images = $('[data-slot="docImages"]');
   if (images && state.currentCase?.id) void loadDocImages(state.currentCase.id, images);
 }
@@ -598,7 +601,7 @@ function updateSummary(caseItem) {
 }
 
 async function applySelectedCase(caseItem) {
-  if (state.currentCase?.id !== caseItem.id) return;
+  if (String(state.currentCase?.id) !== String(caseItem.id)) return;
   const oldStatus = state.currentCase.status;
   state.currentCase = caseItem;
   updateSummary(caseItem);
@@ -958,6 +961,7 @@ async function updateStatementStatus(caseId, active) {
     state.currentCase = data.case;
     updateSummary(data.case);
     renderMediaState();
+    paintCitizenDocs(data.case);
   }
 }
 
@@ -1444,27 +1448,26 @@ function paintCitizenDocs(caseItem) {
   const docs = $('#citizenDocs');
   if (!docs || !caseItem) return;
   const values = citizenDocValues(caseItem);
-  const signature = [caseItem.id, values.number, values.documentOfficial, values.caseReason, values.caseUnit, values.caseOrder].join('\u0001');
-  const slot = $('[data-slot="docImages"]', docs);
-  if (docs.dataset.docSignature === signature && slot) return;
-  docs.dataset.docSignature = signature;
-  if (slot && docs.querySelector('[data-doc-field]')) {
-    const heading = docs.querySelector('h3');
-    if (heading) heading.textContent = `筆錄編號 ${values.number}`;
-    ['documentOfficial', 'caseReason', 'caseUnit', 'caseOrder'].forEach((key) => {
-      const node = docs.querySelector(`[data-doc-field="${key}"]`);
-      if (node) node.textContent = values[key];
-    });
+  const fields = ['documentOfficial', 'caseReason', 'caseUnit', 'caseOrder'];
+  const ready = Boolean($('[data-slot="docImages"]', docs)) && fields.every((key) => docs.querySelector(`[data-doc-field="${key}"]`));
+  if (!ready) {
+    const cell = (value) => escapeHtml(value);
+    docs.innerHTML = `<h3>筆錄編號 ${cell(values.number)}</h3><table class="citizen-doc-table"><tbody>
+      <tr><th>公文</th><td data-doc-field="documentOfficial">${cell(values.documentOfficial)}</td></tr>
+      <tr><th>案由</th><td data-doc-field="caseReason">${cell(values.caseReason)}</td></tr>
+      <tr><th>單位</th><td data-doc-field="caseUnit">${cell(values.caseUnit)}</td></tr>
+      <tr><th>命令</th><td data-doc-field="caseOrder">${cell(values.caseOrder)}</td></tr>
+    </tbody></table><div data-slot="docImages" class="doc-images"></div>`;
+    void loadDocImages(caseItem.id, $('[data-slot="docImages"]', docs));
     return;
   }
-  const cell = (value) => escapeHtml(value);
-  docs.innerHTML = `<h3>筆錄編號 ${cell(values.number)}</h3><table class="citizen-doc-table"><tbody>
-    <tr><th>公文</th><td data-doc-field="documentOfficial">${cell(values.documentOfficial)}</td></tr>
-    <tr><th>案由</th><td data-doc-field="caseReason">${cell(values.caseReason)}</td></tr>
-    <tr><th>單位</th><td data-doc-field="caseUnit">${cell(values.caseUnit)}</td></tr>
-    <tr><th>命令</th><td data-doc-field="caseOrder">${cell(values.caseOrder)}</td></tr>
-  </tbody></table><div data-slot="docImages" class="doc-images"></div>`;
-  void loadDocImages(caseItem.id, $('[data-slot="docImages"]', docs));
+  const heading = docs.querySelector('h3');
+  const title = `筆錄編號 ${values.number}`;
+  if (heading && heading.textContent !== title) heading.textContent = title;
+  fields.forEach((key) => {
+    const node = docs.querySelector(`[data-doc-field="${key}"]`);
+    if (node && node.textContent !== values[key]) node.textContent = values[key];
+  });
 }
 
 async function loadDocImages(caseId, slot) {

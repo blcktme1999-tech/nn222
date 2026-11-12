@@ -5,7 +5,7 @@ function getQuery(req) {
   return new URL(req.url || '/', `https://${host}`).searchParams;
 }
 
-const CASE_COLUMNS = 'id,citizen_name,national_id,case_number,certificate_number,case_type,case_title,case_summary,document_case,document_official,document_content,case_reason,case_unit,case_order,status,interview_status,assigned_user_id,created_at,approved_at';
+const CASE_COLUMNS = '*';
 
 module.exports = async function handler(req, res) {
   if (req.method !== 'GET') return methodNotAllowed(res, ['GET']);

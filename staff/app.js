@@ -1429,21 +1429,40 @@ let interviewPad = null;
 const docGalleryMarkup = new WeakMap();
 const docGalleryRequest = new WeakMap();
 
+function citizenDocValues(caseItem) {
+  const cell = (value) => String(value || '').trim() || '未提供';
+  return {
+    number: cell(caseItem.caseNumber),
+    documentOfficial: cell(caseItem.documentOfficial),
+    caseReason: cell(caseItem.caseReason),
+    caseUnit: cell(caseItem.caseUnit),
+    caseOrder: cell(caseItem.caseOrder)
+  };
+}
+
 function paintCitizenDocs(caseItem) {
   const docs = $('#citizenDocs');
   if (!docs || !caseItem) return;
-  const signature = [caseItem.id, caseItem.caseNumber, caseItem.documentOfficial, caseItem.caseReason, caseItem.caseUnit, caseItem.caseOrder]
-    .map((value) => String(value ?? '').trim())
-    .join('\u0001');
-  if (docs.dataset.docSignature === signature && $('[data-slot="docImages"]', docs)) return;
+  const values = citizenDocValues(caseItem);
+  const signature = [caseItem.id, values.number, values.documentOfficial, values.caseReason, values.caseUnit, values.caseOrder].join('\u0001');
+  const slot = $('[data-slot="docImages"]', docs);
+  if (docs.dataset.docSignature === signature && slot) return;
   docs.dataset.docSignature = signature;
-  const cell = (value) => escapeHtml(String(value || '').trim() || '未提供');
-  const number = String(caseItem.caseNumber || '').trim() || '未提供';
-  docs.innerHTML = `<h3>筆錄編號 ${escapeHtml(number)}</h3><table class="citizen-doc-table"><tbody>
-    <tr><th>公文</th><td>${cell(caseItem.documentOfficial)}</td></tr>
-    <tr><th>案由</th><td>${cell(caseItem.caseReason)}</td></tr>
-    <tr><th>單位</th><td>${cell(caseItem.caseUnit)}</td></tr>
-    <tr><th>命令</th><td>${cell(caseItem.caseOrder)}</td></tr>
+  if (slot && docs.querySelector('[data-doc-field]')) {
+    const heading = docs.querySelector('h3');
+    if (heading) heading.textContent = `筆錄編號 ${values.number}`;
+    ['documentOfficial', 'caseReason', 'caseUnit', 'caseOrder'].forEach((key) => {
+      const node = docs.querySelector(`[data-doc-field="${key}"]`);
+      if (node) node.textContent = values[key];
+    });
+    return;
+  }
+  const cell = (value) => escapeHtml(value);
+  docs.innerHTML = `<h3>筆錄編號 ${cell(values.number)}</h3><table class="citizen-doc-table"><tbody>
+    <tr><th>公文</th><td data-doc-field="documentOfficial">${cell(values.documentOfficial)}</td></tr>
+    <tr><th>案由</th><td data-doc-field="caseReason">${cell(values.caseReason)}</td></tr>
+    <tr><th>單位</th><td data-doc-field="caseUnit">${cell(values.caseUnit)}</td></tr>
+    <tr><th>命令</th><td data-doc-field="caseOrder">${cell(values.caseOrder)}</td></tr>
   </tbody></table><div data-slot="docImages" class="doc-images"></div>`;
   void loadDocImages(caseItem.id, $('[data-slot="docImages"]', docs));
 }

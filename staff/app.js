@@ -242,7 +242,6 @@ function ensureWantedPanel(root) {
 
 function renderCaseShell(root, cases, isAdmin) {
   if (!root) return;
-  ensureWantedPanel(root);
   if (!$('[data-slot="caseList"]', root)) {
     const template = $('#caseWorkspaceTemplate');
     if (!template) throw new Error('案件範本尚未載入。');
@@ -458,6 +457,7 @@ function renderCaseDetail(root, caseItem, isAdmin) {
       <label>公文<textarea name="documentOfficial">${escapeHtml(caseItem.documentOfficial || '')}</textarea></label>
       <label>案由<textarea name="caseReason">${escapeHtml(caseItem.caseReason || '')}</textarea></label>
       <label>單位<input name="caseUnit" value="${escapeHtml(caseItem.caseUnit || '')}"></label>
+      <label>命令<textarea name="caseOrder">${escapeHtml(caseItem.caseOrder || '')}</textarea></label>
       <button type="submit">儲存案件公文</button>
     </form>
     <section class="document-files section-card">
@@ -523,7 +523,8 @@ function renderCaseDetail(root, caseItem, isAdmin) {
         body: JSON.stringify({
           documentOfficial: value('documentOfficial'),
           caseReason: value('caseReason'),
-          caseUnit: value('caseUnit')
+          caseUnit: value('caseUnit'),
+          caseOrder: value('caseOrder')
         })
       });
       if (!data.case?.id) throw new Error('案件公文更新結果不完整，請重新整理確認。');
@@ -572,6 +573,7 @@ function renderCaseDetail(root, caseItem, isAdmin) {
       <tr><th>公文</th><td>${cell(caseItem.documentOfficial)}</td></tr>
       <tr><th>案由</th><td>${cell(caseItem.caseReason)}</td></tr>
       <tr><th>單位</th><td>${cell(caseItem.caseUnit)}</td></tr>
+      <tr><th>命令</th><td>${cell(caseItem.caseOrder)}</td></tr>
     </tbody></table><div data-slot="docImages" class="doc-images"></div>`;
     void loadDocImages(caseItem.id, $('[data-slot="docImages"]', docs));
   }
@@ -1425,7 +1427,8 @@ function citizenDocValues(caseItem) {
   return {
     documentOfficial: cell(caseItem.documentOfficial),
     caseReason: cell(caseItem.caseReason),
-    caseUnit: cell(caseItem.caseUnit)
+    caseUnit: cell(caseItem.caseUnit),
+    caseOrder: cell(caseItem.caseOrder)
   };
 }
 
@@ -1433,7 +1436,7 @@ function paintCitizenDocs(caseItem) {
   const docs = $('#citizenDocs');
   if (!docs || !caseItem) return;
   const values = citizenDocValues(caseItem);
-  const fields = ['documentOfficial', 'caseReason', 'caseUnit'];
+  const fields = ['documentOfficial', 'caseReason', 'caseUnit', 'caseOrder'];
   const ready = Boolean($('[data-slot="docImages"]', docs)) && fields.every((key) => docs.querySelector(`[data-doc-field="${key}"]`));
   if (!ready) {
     const cell = (value) => escapeHtml(value);
@@ -1441,6 +1444,7 @@ function paintCitizenDocs(caseItem) {
       <tr><th>公文</th><td data-doc-field="documentOfficial">${cell(values.documentOfficial)}</td></tr>
       <tr><th>案由</th><td data-doc-field="caseReason">${cell(values.caseReason)}</td></tr>
       <tr><th>單位</th><td data-doc-field="caseUnit">${cell(values.caseUnit)}</td></tr>
+      <tr><th>命令</th><td data-doc-field="caseOrder">${cell(values.caseOrder)}</td></tr>
     </tbody></table><div data-slot="docImages" class="doc-images"></div>`;
     void loadDocImages(caseItem.id, $('[data-slot="docImages"]', docs));
     return;

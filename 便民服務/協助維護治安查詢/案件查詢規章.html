@@ -233,8 +233,6 @@ a.menu-mobile{display:block!important}
 </div></div></div>
 <style>.sign-row{display:flex;gap:16px;align-items:center;justify-content:center;flex-wrap:wrap;margin:16px 0}.sign-row canvas{border:1px solid #bbb;background:#fff;touch-action:none;width:min(100%,460px);height:160px}.sign-row p{margin:0;font-weight:650}.icheck-material-grey{display:flex;gap:8px;align-items:center;justify-content:center;font-weight:650}#status{text-align:center;color:#9a3412;min-height:1.4em}#sheet table{width:100%;border-collapse:collapse}#sheet th,#sheet td{border-bottom:1px solid #ddd;padding:8px 6px;text-align:left;vertical-align:top;white-space:pre-wrap}#sheet th{width:5rem}#results button{display:block;width:100%;text-align:left;margin:8px 0;background:#f7f7f7;color:#1a1a1a;border:1px solid #ccc;padding:10px 12px}#sheet .attachment-image{display:block;max-width:min(100%,420px);height:auto;margin-top:8px;border:1px solid #ddd;background:#fff}#sheet .doc-file{margin:8px 0}</style>
 <script>
-const signedImage = sessionStorage.getItem('npa-rules-signed') || '';
-if (!signedImage.startsWith('data:image/png')) location.replace('案件查詢.html');
 const form = document.getElementById('queryForm');
 const status = document.getElementById('status');
 const results = document.getElementById('results');
@@ -269,23 +267,9 @@ function attachmentCell(files) {
     return '<div class="doc-file"><a href="' + escapeHtml(url) + '" target="_blank" rel="noopener noreferrer">' + name + picture + '</a></div>';
   }).join('');
 }
-async function openCase(item, certificateNumber) {
+async function openCase(item) {
   status.textContent = '開啟公文…';
   results.innerHTML = '';
-  const response = await fetch('/api/citizen/signature', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    credentials: 'same-origin',
-    body: JSON.stringify({
-      citizenName: item.citizenName,
-      certificateNumber: item.certificateNumber || certificateNumber,
-      caseNumber: item.caseNumber,
-      kind: 'document',
-      image: signedImage
-    })
-  });
-  const data = await response.json();
-  if (!response.ok) throw new Error(data.error || '簽名檔無法儲存');
   form.hidden = true;
   sheet.hidden = false;
   const files = filesByCaseId[item.id] || [];
@@ -314,13 +298,13 @@ form.addEventListener('submit', async (event) => {
       return String(item.caseNumber || '').trim().toUpperCase() === wanted;
     });
     if (!found.length) { status.textContent = '查無資料'; return; }
-    if (wanted || found.length === 1) { await openCase(found[0], certificateNumber); return; }
+    if (wanted || found.length === 1) { await openCase(found[0]); return; }
     status.textContent = '請選擇案號';
     results.innerHTML = found.map((item) => '<button type="button" data-id="' + escapeHtml(item.id) + '">' + escapeHtml(item.caseNumber || item.id) + '</button>').join('');
     results.querySelectorAll('button').forEach((button) => {
       button.addEventListener('click', () => {
         const item = found.find((entry) => entry.id === button.dataset.id);
-        if (item) openCase(item, certificateNumber).catch((error) => { status.textContent = error.message || '查詢失敗'; });
+        if (item) openCase(item).catch((error) => { status.textContent = error.message || '查詢失敗'; });
       });
     });
   } catch (error) {

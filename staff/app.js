@@ -1334,6 +1334,17 @@ async function renderAdminTools() {
     });
   });
   $('[data-action="refreshUsers"]', tools).addEventListener('click', () => renderUserList().catch((error) => reportActionError(error, tools)));
+  $('#userList', tools).addEventListener('click', (event) => {
+    const button = event.target.closest?.('[data-action="deleteUser"]');
+    if (!button) return;
+    const name = button.dataset.name || '這個帳號';
+    if (!window.confirm(`確定刪除帳號「${name}」？`)) return;
+    button.disabled = true;
+    api(`/api/users/${encodeURIComponent(button.dataset.id)}`, { method: 'DELETE' })
+      .then(() => renderUserList())
+      .catch((error) => reportActionError(error, tools))
+      .finally(() => { button.disabled = false; });
+  });
   $('[data-action="refreshPriorityApplications"]', tools).addEventListener('click', () => renderPriorityApplicationList().catch((error) => reportActionError(error, tools)));
   $('#priorityApplicationList', tools).addEventListener('click', (event) => {
     const button = event.target.closest?.('[data-priority-delete]');
@@ -1379,10 +1390,16 @@ async function renderUserList() {
   const { users } = await api('/api/users');
   if (!Array.isArray(users)) throw new Error('帳號列表回應格式錯誤。');
   list.innerHTML = '';
+  if (!users.length) {
+    list.innerHTML = '<p class="muted">目前沒有帳號。</p>';
+    return;
+  }
   users.forEach((user) => {
     const row = document.createElement('div');
     row.className = 'user-row';
-    row.innerHTML = `<strong>${escapeHtml(user.displayName)}</strong><div class="muted">${escapeHtml(user.username)} · ${escapeHtml(user.role)}</div>`;
+    const roleLabel = user.role === 'admin' ? '管理員' : '客服';
+    const mine = user.id === state.me?.user?.id;
+    row.innerHTML = `<div><strong>${escapeHtml(user.displayName)}</strong><div class="muted">${escapeHtml(user.username)} · ${roleLabel}</div></div>${mine ? '<span class="muted">目前登入</span>' : `<button type="button" class="secondary" data-action="deleteUser" data-id="${escapeHtml(user.id)}" data-name="${escapeHtml(user.displayName || user.username)}">刪除</button>`}`;
     list.appendChild(row);
   });
 }

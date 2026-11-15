@@ -235,7 +235,7 @@
 
 #serviceApp .admin-grid{ display: grid; grid-template-columns: minmax(280px, 420px) minmax(0, 1fr); gap: 1rem; margin-top: 1rem; }
 #serviceApp .table-list{ display: grid; gap: .65rem; }
-#serviceApp .user-row{ border: 1px solid var(--line); border-radius: 6px; padding: .8rem; background: #fff; }
+#serviceApp .user-row{ display: flex; align-items: center; justify-content: space-between; gap: .75rem; border: 1px solid var(--line); border-radius: 6px; padding: .8rem; background: #fff; }
 #serviceApp .citizen-case-list{ margin-bottom: 1rem; }
 #serviceApp .citizen-case-cards{ display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: .75rem; }
 

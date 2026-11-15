@@ -279,6 +279,10 @@ function renderCaseList(root, cases, isAdmin) {
 }
 
 function renderCreateRelatedCase(root, sourceCase, isAdmin = false) {
+  if (staffCallIsLive() && state.callRoot && $('[data-slot="media"]', root) === state.callRoot) {
+    parkLiveMedia();
+    ensureMediaSlot(root);
+  }
   const summary = $('[data-slot="caseSummary"]', root);
   const conversation = $('[data-slot="conversation"]', root);
   const media = $('[data-slot="media"]', root);
@@ -428,6 +432,7 @@ function openCaseDetail(root, _cases, caseItem, isAdmin) {
   return selectCase(root, caseItem, isAdmin);
 }
 
+  media.querySelectorAll('video').forEach((video) => { video.play?.().catch(() => {}); });
 function renderCaseDetail(root, caseItem, isAdmin) {
   const summary = $('[data-slot="caseSummary"]', root);
   const conversation = $('[data-slot="conversation"]', root);
@@ -455,23 +460,34 @@ function renderCaseDetail(root, caseItem, isAdmin) {
     ${state.me?.user ? `<form class="stacked-form document-edit-form section-card">
       <h3>編輯案件公文</h3>
       <label>公文<textarea name="documentOfficial">${escapeHtml(caseItem.documentOfficial || '')}</textarea></label>
-      <label>案由<textarea name="caseReason">${escapeHtml(caseItem.caseReason || '')}</textarea></label>
-      <label>單位<input name="caseUnit" value="${escapeHtml(caseItem.caseUnit || '')}"></label>
-      <label>命令<textarea name="caseOrder">${escapeHtml(caseItem.caseOrder || '')}</textarea></label>
-      <button type="submit">儲存案件公文</button>
-    </form>
-    <section class="document-files section-card">
-      <h3>案件附件</h3>
-      <div data-slot="documentFiles"><p class="muted">尚無附件</p></div>
-      <form class="document-file-form stacked-form">
-        <label>上傳給民眾在案件公文打開的檔案（Excel 或其他檔案，每個最多 20 MB）<input name="file" type="file" required></label>
-        <button type="submit">上傳檔案</button>
-      </form>
-    </section>` : ''}`;
-  $('[data-action="deleteCase"]', summary)?.addEventListener('click', (event) => {
-    const button = event.currentTarget;
-    const label = `${caseItem.citizenName} ${displayCaseNumber(caseItem)}`.trim();
-    if (!window.confirm(`確定刪除「${label}」？這筆案件的公文與附件會一併刪除。`)) return;
+    if (staffCallIsLive() && String(state.videoSession.caseId) === String(caseItem.id)) restoreLiveMedia(root);
+    return true;
+  }
+  const onThisCall = staffCallIsLive() && String(state.videoSession.caseId) === String(caseItem.id);
+  const keepOtherCall = staffCallIsLive() && !onThisCall;
+  if (!keepOtherCall && !onThisCall) {
+    if (state.videoSession?.hasLocalMedia && !window.confirm('切換案件將關閉我方攝影機與麥克風，並中斷目前視訊。新案件只接收對方視訊，不會自動開啟我方裝置。是否繼續？')) return false;
+    await disconnectCurrent();
+  }
+  const previousRoot = state.detailRoot;
+  state.viewVersion += 1;
+  state.conversation = null;
+  clearInterval(state.messagePollTimer);
+  if (previousRoot && previousRoot !== root) {
+    for (const slot of ['caseSummary', 'conversation', 'media']) {
+      const node = $(`[data-slot="${slot}"]`, previousRoot);
+      if (!node) continue;
+      if (slot === 'media' && node === state.callRoot && staffCallIsLive()) {
+        parkLiveMedia();
+        continue;
+      }
+      node.replaceChildren();
+      node.classList.add('hidden');
+    }
+  }
+  state.currentCase = caseItem;
+  state.detailRoot = root;
+  if (!keepOtherCall && !onThisCall) state.mediaError = '';
     button.disabled = true;
     enqueueWorkflow(async () => {
       if (state.detailRoot !== root || state.currentCase?.id !== caseItem.id) return;
@@ -494,11 +510,19 @@ function renderCaseDetail(root, caseItem, isAdmin) {
           node.classList.remove('hidden');
         }
       }
-      renderAllCaseLists();
-    }).catch((error) => reportActionError(error, summary)).finally(() => {
-      if (button.isConnected) button.disabled = false;
+  const awayFromCall = staffCallIsLive() && String(state.videoSession.caseId) !== String(caseItem.id);
+  const backToCall = !awayFromCall && staffCallIsLive() && state.callRoot?.isConnected && String(state.callRoot.dataset.caseId) === String(caseItem.id) && String(state.videoSession.caseId) === String(caseItem.id);
+  if (awayFromCall && state.callRoot && $('[data-slot="media"]', root) === state.callRoot) parkLiveMedia();
+  else if (backToCall) restoreLiveMedia(root);
+  const summary = $('[data-slot="caseSummary"]', root);
+  const conversation = $('[data-slot="conversation"]', root);
+  const media = $('[data-slot="media"]', root) || ensureMediaSlot(root);
     });
-  });
+  for (const node of [summary, conversation, media]) {
+    if (awayFromCall && node === state.callRoot) continue;
+    node.classList.remove('hidden', 'empty-state');
+    node.dataset.caseId = String(caseItem.id);
+  }
   $('[data-action="approve"]', summary)?.addEventListener('click', (event) => {
     const button = event.currentTarget;
     button.disabled = true;
@@ -541,7 +565,7 @@ function renderCaseDetail(root, caseItem, isAdmin) {
     event.preventDefault();
     const input = fileForm.elements.namedItem('file');
     const file = input.files?.[0];
-    if (!file) return;
+      if (state.videoSession && String(state.videoSession.caseId) === String(caseItem.id)) await state.videoSession.disconnect();
     void submitAdminForm(fileForm, async () => {
       const saved = await uploadStaffFile(casePath(caseItem.id, '/files'), file);
       if (saved && state.conversation) mergeConversation(state.conversation, [], [saved]);
@@ -560,6 +584,10 @@ function renderCaseDetail(root, caseItem, isAdmin) {
       .finally(() => { button.disabled = false; });
   });
   if (fileForm) void loadDocumentFiles(summary, caseItem);
+      if (staffCallIsLive()) {
+        const live = state.cases.find((item) => String(item.id) === String(state.videoSession.caseId));
+        if (live) await selectCaseNow(root, live, state.me?.user?.role === 'admin');
+      }
   if (!isAdmin && media?.parentElement) {
     let docs = $('[data-slot="citizenDocs"]', root);
     if (!docs) {
@@ -643,7 +671,9 @@ async function previewSelectedCamera(deviceId, root, caseId) {
     return;
   }
   cameraPreviewStream = stream;
-  const video = document.createElement('video');
+  if (awayFromCall) renderParkedCallNote(root);
+  else if (backToCall) renderMediaState();
+  else renderMedia(media, caseItem);
   video.muted = true;
   video.autoplay = true;
   video.playsInline = true;
@@ -662,8 +692,8 @@ function renderMedia(root, caseItem) {
     <div class="media-grid"><div class="media-controls">
       <div data-slot="videoGrid" class="video-grid video-pair">
         <p class="visually-hidden" data-slot="statementLive" role="status"></p>
-        <div class="video-tile"><div data-slot="localVideoSlot" class="video-slot"><div data-slot="localPlayer" class="video-player"></div></div><div data-slot="localLabel" class="video-label">${staff ? '承辦人' : '民眾'}</div></div>
-        <div data-slot="remotePlaceholder" class="video-tile"><div class="video-slot video-placeholder"><p>${staff ? '等待民眾進入筆錄' : '等待承辦人進入筆錄'}</p></div><div class="video-label">${staff ? '民眾' : '承辦人'}</div></div>
+        <div class="video-tile"><div data-slot="localVideoSlot" class="video-slot"><div data-slot="localPlayer" class="video-player"></div></div><div data-slot="localLabel" class="video-label">${staff ? '承辦人員' : '民眾'}</div></div>
+        <div data-slot="remotePlaceholder" class="video-tile"><div class="video-slot video-placeholder"><p>${staff ? '等待民眾進入筆錄' : '等待承辦人員進入筆錄'}</p></div><div class="video-label">${staff ? '民眾' : '承辦人員'}</div></div>
       </div>
       <p data-slot="callStatus" class="call-status" role="status" aria-live="polite"></p>
       <p data-slot="recordingNotice" class="recording-notice">尚未進入筆錄</p>
@@ -950,23 +980,25 @@ function endStatementIfCallStopped() {
 }
 
 function endStatementOnPageExit() {
-  const caseItem = state.currentCase;
-  if (state.me?.user || !caseItem || caseItem.status === 'closed' || caseItem.interviewStatus !== 'active') return undefined;
-  return fetch(casePath(caseItem.id, '/statement'), {
-    method: 'POST', credentials: 'same-origin', cache: 'no-store', keepalive: true,
-    headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ active: false })
-  }).catch(() => {});
-}
-
-async function updateStatementStatus(caseId, active) {
-  const data = await api(casePath(caseId, '/statement'), postOptions({ active }));
-  if (!data.case || data.case.id !== caseId) throw new Error('筆錄狀態更新結果不完整，請重試。');
-  state.caseRevision += 1;
-  if (state.currentCase?.id === caseId) {
-    state.currentCase = data.case;
-    updateSummary(data.case);
-    renderMediaState();
-    paintCitizenDocs(data.case);
+async function openStaffRoom() {
+  if (!state.me?.user || state.mediaPending) return;
+  const session = state.videoSession;
+  const liveId = session?.caseId;
+  if (liveId && (session.connected || session.hasLocalMedia)) {
+    const liveCase = state.cases.find((item) => String(item.id) === String(liveId));
+    if (liveCase?.status === 'closed') {
+      await session.disconnect();
+      if (state.currentCase && state.detailRoot?.isConnected) renderCaseDetail(state.detailRoot, state.currentCase, state.me.user.role === 'admin');
+      return;
+    }
+  }
+  // One open interview must not pull every handler into that room.
+  if (staffCallIsLive()) return;
+  const current = state.currentCase;
+  if (!current || current.status === 'closed' || current.interviewStatus !== 'active') return;
+  if (String(state.staffHoldCallId) === String(current.id)) return;
+  if (!isCurrentRoot(current.id, state.callRoot)) return;
+  try { await watchCall(current.id, state.callRoot); }
   }
 }
 

@@ -498,7 +498,7 @@
           remote.tile.appendChild(remote.label);
           grid.appendChild(remote.tile);
         }
-        const role = /^(agent|admin|staff)-/.test(String(remote.uid)) ? '客服' : '民眾';
+        const role = /^(agent|admin|staff)-/.test(String(remote.uid)) ? '承辦人員' : '民眾';
         remote.label.textContent = role + (remote.media.has('video') ? '' : '（僅語音）');
       }
       this.root.querySelector('[data-slot="remotePlaceholder"]').hidden = session.remotes.size > 0;

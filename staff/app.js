@@ -1060,7 +1060,7 @@ function imageTag(file) {
   if (!isImageFile(file)) return '';
   const url = safeFileUrl(file.url);
   if (!url) return '';
-  return `<img class="attachment-image" src="${escapeHtml(url)}" alt="${escapeHtml(file.originalName || '附件')}">`;
+  return `<img class="attachment-image" src="${escapeHtml(url)}" alt="">`;
 }
 
 function fileElement(file) {
@@ -1069,7 +1069,7 @@ function fileElement(file) {
   const url = safeFileUrl(file.url);
   const name = escapeHtml(file.originalName || '附件');
   const picture = imageTag(file);
-  item.innerHTML = `${url ? `<a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">${name}${picture}</a>` : `<strong>${name}</strong>${picture}<span>（連結無效，無法開啟）</span>`}
+  item.innerHTML = `${url ? `<a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">${name}</a>${picture}` : `<strong>${name}</strong>${picture}<span>（連結無效，無法開啟）</span>`}
     <div class="muted">${escapeHtml(formatSize(file.size))} · 上傳者：${escapeHtml(file.uploadedBy || '未提供')} · ${escapeHtml(formatTime(file.createdAt))}</div>`;
   return item;
 }

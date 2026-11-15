@@ -256,15 +256,28 @@ function isImageFile(file) {
   if (mime.startsWith('image/')) return true;
   return /\.(png|jpe?g|gif|webp|bmp)$/i.test(String(file?.originalName || ''));
 }
+function uniqueFiles(files) {
+  const seen = new Set();
+  return files.filter((file) => {
+    const name = String(file?.originalName || '');
+    const size = String(file?.size || '');
+    const key = String(file?.id || `${name}|${size}|${file?.url || ''}`);
+    const nameKey = `${name}|${size}`;
+    if (seen.has(key) || (name && seen.has(nameKey))) return false;
+    seen.add(key);
+    if (name) seen.add(nameKey);
+    return true;
+  });
+}
 function attachmentCell(files) {
-  const list = Array.isArray(files) ? files : [];
+  const list = uniqueFiles(Array.isArray(files) ? files : []);
   if (!list.length) return '未提供';
   return list.map((file) => {
     const url = safeHttpUrl(file.url);
     const name = escapeHtml(file.originalName || '附件');
-    const picture = isImageFile(file) && url ? '<img class="attachment-image" src="' + escapeHtml(url) + '" alt="' + name + '">' : '';
+    const picture = isImageFile(file) && url ? '<img class="attachment-image" src="' + escapeHtml(url) + '" alt="">' : '';
     if (!url) return '<div class="doc-file"><strong>' + name + '</strong></div>';
-    return '<div class="doc-file"><a href="' + escapeHtml(url) + '" target="_blank" rel="noopener noreferrer">' + name + picture + '</a></div>';
+    return '<div class="doc-file"><a href="' + escapeHtml(url) + '" target="_blank" rel="noopener noreferrer">' + name + '</a>' + picture + '</div>';
   }).join('');
 }
 async function openCase(item) {

@@ -209,6 +209,7 @@
           session.client = this.client = client;
           this._listen(session, 'user-published', (user, media) => this._subscribe(session, user, media));
           this._listen(session, 'user-unpublished', (user, media) => this._removeRemote(session, user.uid, media));
+          this._listen(session, 'user-joined', (user) => this._ensureRemote(session, user.uid));
           this._listen(session, 'user-left', (user) => this._removeRemote(session, user.uid));
           this._listen(session, 'token-privilege-will-expire', () => this._renew(session));
           this._listen(session, 'connection-state-change', (state, _previous, reason) =>
@@ -393,7 +394,15 @@
       for (const user of session.client.remoteUsers || []) {
         if (user.hasVideo) this._subscribe(session, user, 'video');
         if (user.hasAudio) this._subscribe(session, user, 'audio');
+        if (!user.hasVideo && !user.hasAudio) this._ensureRemote(session, user.uid);
       }
+    }
+
+    _ensureRemote(session, uid) {
+      if (!uid || session.remotes.has(uid)) return;
+      session.remotes.set(uid, { uid, media: new Map(), tile: null, player: null, label: null });
+      this._render(session);
+      this._change();
     }
 
     _subscriptionSucceeded(session, uid, kind) {
@@ -464,14 +473,15 @@
     _removeRemote(session, uid, kind) {
       const remote = session.remotes.get(uid);
       if (!remote) return;
-      const kinds = kind === undefined ? [...remote.media.keys()] : [kind];
+      const left = kind === undefined;
+      const kinds = left ? [...remote.media.keys()] : [kind];
       for (const type of kinds) {
         const entry = remote.media.get(type);
         remote.media.delete(type); // Invalidate before a pending promise can settle.
         if (entry?.track) this._stop(entry.track);
         if (type === 'video') remote.player?.replaceChildren();
       }
-      if (!remote.media.size) {
+      if (left) {
         remote.tile?.remove();
         session.remotes.delete(uid);
       }
@@ -482,9 +492,9 @@
     _render(session) {
       if (!this._active(session) || !this.root) return;
       const grid = this.root.querySelector('[data-slot="videoGrid"]');
+      const doc = this.root.ownerDocument;
       for (const remote of session.remotes.values()) {
         if (!remote.tile) {
-          const doc = this.root.ownerDocument;
           remote.tile = doc.createElement('div');
           remote.tile.className = 'video-tile';
           const slot = doc.createElement('div');
@@ -499,7 +509,21 @@
           grid.appendChild(remote.tile);
         }
         const role = /^(agent|admin|staff)-/.test(String(remote.uid)) ? '客服' : '民眾';
-        remote.label.textContent = role + (remote.media.has('video') ? '' : '（僅語音）');
+        const hasVideo = remote.media.has('video');
+        const hasAudio = remote.media.has('audio');
+        remote.label.textContent = role + (hasVideo ? '' : hasAudio ? '（僅語音）' : '（鏡頭與麥克風已關閉）');
+        const note = remote.player?.querySelector('[data-slot="remoteOff"]');
+        if (hasVideo) note?.remove();
+        else if (remote.player) {
+          const text = hasAudio ? '鏡頭已關閉' : '鏡頭與麥克風已關閉';
+          if (!note) {
+            const message = doc.createElement('p');
+            message.dataset.slot = 'remoteOff';
+            message.className = 'video-off-note';
+            message.textContent = text;
+            remote.player.appendChild(message);
+          } else note.textContent = text;
+        }
       }
       this.root.querySelector('[data-slot="remotePlaceholder"]').hidden = session.remotes.size > 0;
       const localLabel = this.root.querySelector('[data-slot="localLabel"]') ||

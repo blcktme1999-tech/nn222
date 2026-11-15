@@ -608,7 +608,7 @@ function getVideoSession() {
         requireOpenRoot(caseId, state.callRoot);
         return api(casePath(caseId, '/agora-token'), { method: 'POST' });
       },
-      onChange: () => { renderMediaState(); void endStatementIfCallStopped(); releaseCitizenInterviewIfCameraOff(); },
+      onChange: () => { renderMediaState(); void endStatementIfCallStopped(); releaseCitizenInterviewIfCallDropped(); },
       onError: (error) => { controllerErrors.add(error); renderMediaState(); }
     });
   }
@@ -678,8 +678,8 @@ function renderMedia(root, caseItem) {
       </div>` : ''}
       <div class="button-row">
         ${!staff && root.closest('.interview-live') ? `<button type="button" data-action="endInterview" class="warning">結束筆錄</button>` : `<button type="button" data-action="joinCall" class="warning">進入筆錄</button>
-        <button type="button" data-action="toggleVideo" class="secondary" aria-pressed="false">開啟鏡頭</button>
         <button type="button" data-action="retryMedia" class="secondary" hidden>重試視訊</button>`}
+        <button type="button" data-action="toggleVideo" class="secondary" aria-pressed="false">開啟鏡頭</button>
         <button type="button" data-action="toggleAudio" class="secondary" aria-pressed="false">開啟麥克風</button>
         <button type="button" data-action="resumeAudio" class="secondary">播放聲音</button>
       </div>
@@ -698,7 +698,6 @@ function renderMedia(root, caseItem) {
       if (enabled && kind === 'video') stopCameraPreview();
       if (enabled) await session.connect(caseItem.id, root);
       await session.setDevice(kind, enabled);
-      if (!staff) await updateStatementStatus(caseItem.id, session.hasLocalMedia);
     }));
   }
   $('[data-action="retryMedia"]', root)?.addEventListener('click', () => mediaAction(() => joinCall(caseItem.id, true, false, root)));
@@ -786,8 +785,8 @@ function renderMediaState() {
   const citizenCallLive = Boolean(state.me?.user || (same && (session.connected || session.hasLocalMedia || ['connecting', 'reconnecting', 'disconnecting'].includes(session.status))));
   const statementLive = open && state.currentCase.interviewStatus === 'active' && citizenCallLive;
   const statementStatus = $('[data-slot="statementLive"]', root);
-  if (statementStatus && statementStatus.textContent !== (statementLive ? '線上筆錄中' : '')) {
-    statementStatus.textContent = statementLive ? '線上筆錄中' : '';
+  if (statementStatus && statementStatus.textContent !== (statementLive ? '錄音中' : '')) {
+    statementStatus.textContent = statementLive ? '錄音中' : '';
   }
   syncStatementMarquee(root, statementLive);
   const errorNode = $('[data-slot="mediaError"]', root);
@@ -813,6 +812,17 @@ function renderMediaState() {
   const videoOn = Boolean(same && session.tracks.has('video'));
   const previewing = Boolean(cameraPreviewStream) && !videoOn;
   if (label) label.textContent = `我方（鏡頭${videoOn ? '已開啟' : previewing ? '預覽中' : '未開啟'}／麥克風${same && session.tracks.has('audio') ? '已開啟' : '未開啟'}）`;
+  const player = $('[data-slot="localPlayer"]', root);
+  const offNote = player?.querySelector('[data-slot="localOff"]');
+  if (player && same && connected && !videoOn && !previewing) {
+    if (!offNote) {
+      const message = document.createElement('p');
+      message.dataset.slot = 'localOff';
+      message.className = 'video-off-note';
+      message.textContent = '鏡頭已關閉';
+      player.appendChild(message);
+    }
+  } else offNote?.remove();
 }
 
 function syncStatementMarquee(root, visible) {
@@ -832,7 +842,7 @@ function syncStatementMarquee(root, visible) {
     track.className = 'statement-marquee-track';
     for (let index = 0; index < 8; index += 1) {
       const item = document.createElement('span');
-      item.textContent = '線上筆錄中';
+      item.textContent = '錄音中';
       track.appendChild(item);
     }
     bar.appendChild(track);
@@ -1523,13 +1533,12 @@ function lockCitizenInterview() {
   if (!history.state?.npaInterview) history.pushState({ npaInterview: 1 }, '', location.href);
 }
 
-function releaseCitizenInterviewIfCameraOff() {
+function releaseCitizenInterviewIfCallDropped() {
   if (!state.interviewLocked || state.me?.user || state.mediaPending || state.leavingInterview) return;
   const session = state.videoSession;
   if (!session) return;
-  if (session.busy || ['connecting', 'reconnecting', 'disconnecting'].includes(session.status)) return;
-  if (session.tracks.has('video')) return;
-  void exitCitizenInterview('鏡頭已關閉，請重新進入筆錄。');
+  if (session.busy || session.connected || ['connecting', 'reconnecting', 'disconnecting'].includes(session.status)) return;
+  void exitCitizenInterview('連線已中斷，請重新進入筆錄。');
 }
 
 async function exitCitizenInterview(message, type = 'error') {

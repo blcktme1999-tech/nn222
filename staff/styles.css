@@ -467,6 +467,10 @@ body.police-service {
 }
 .police-service .video-player { position: absolute; inset: 0; width: 100%; height: 100%; overflow: hidden; }
 .police-service .video-player > * { position: absolute; inset: 0; width: 100%; height: 100%; }
+.police-service .video-player > .video-off-note {
+  z-index: 3; display: grid; place-items: center; margin: 0; padding: 46px 12px 12px;
+  text-align: center; letter-spacing: .08em; color: rgba(237, 245, 255, .92);
+}
 .police-service .video-slot video { display: block; width: 100%; height: 100%; aspect-ratio: auto; object-fit: contain; border-radius: 0; transform: translateZ(0); }
 .police-service .video-slot > video { position: absolute; inset: 0; }
 .police-service .video-label {

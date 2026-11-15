@@ -812,17 +812,6 @@ function renderMediaState() {
   const videoOn = Boolean(same && session.tracks.has('video'));
   const previewing = Boolean(cameraPreviewStream) && !videoOn;
   if (label) label.textContent = `我方（鏡頭${videoOn ? '已開啟' : previewing ? '預覽中' : '未開啟'}／麥克風${same && session.tracks.has('audio') ? '已開啟' : '未開啟'}）`;
-  const player = $('[data-slot="localPlayer"]', root);
-  const offNote = player?.querySelector('[data-slot="localOff"]');
-  if (player && same && connected && !videoOn && !previewing) {
-    if (!offNote) {
-      const message = document.createElement('p');
-      message.dataset.slot = 'localOff';
-      message.className = 'video-off-note';
-      message.textContent = '鏡頭已關閉';
-      player.appendChild(message);
-    }
-  } else offNote?.remove();
 }
 
 function syncStatementMarquee(root, visible) {

@@ -9,7 +9,7 @@ const state = {
   conversation: null, viewVersion: 0, caseRevision: 0,
   workflow: Promise.resolve(), caseLoad: null,
   casePollTimer: null, messagePollTimer: null,
-  interviewLocked: false, leavingInterview: false
+  interviewLocked: false, leavingInterview: false, staffHoldCallId: null
 };
 const MAX_UPLOAD_BYTES = 3 * 1024 * 1024;
 // Controller failures also reject public operations. Do not cache those rejects
@@ -678,6 +678,7 @@ function renderMedia(root, caseItem) {
       </div>` : ''}
       <div class="button-row">
         ${!staff && root.closest('.interview-live') ? `<button type="button" data-action="endInterview" class="warning">結束筆錄</button>` : `<button type="button" data-action="joinCall" class="warning">進入筆錄</button>
+        <button type="button" data-action="endStaffCall" class="warning">結束筆錄</button>
         <button type="button" data-action="retryMedia" class="secondary" hidden>重試視訊</button>`}
         <button type="button" data-action="toggleVideo" class="secondary" aria-pressed="false">開啟鏡頭</button>
         <button type="button" data-action="toggleAudio" class="secondary" aria-pressed="false">開啟麥克風</button>
@@ -686,6 +687,14 @@ function renderMedia(root, caseItem) {
     </div></div>`;
   const mediaAction = (operation) => runMediaAction(caseItem.id, root, operation).catch(showMediaError);
   $('[data-action="joinCall"]', root)?.addEventListener('click', () => mediaAction(() => joinCall(caseItem.id, true, false, root)));
+  $('[data-action="endStaffCall"]', root)?.addEventListener('click', () => {
+    if (!window.confirm('結束筆錄會關閉鏡頭與麥克風，人會留在後台。確定結束？')) return;
+    mediaAction(async () => {
+      state.staffHoldCallId = String(caseItem.id);
+      stopCameraPreview();
+      await leaveCall(caseItem.id, false);
+    });
+  });
   $('[data-action="endInterview"]', root)?.addEventListener('click', () => {
     if (!window.confirm('結束筆錄會關閉鏡頭。下次必須重新填寫、選案件並簽名。確定結束？')) return;
     void exitCitizenInterview('已結束筆錄。要再次筆錄請重新進入。', 'info');
@@ -799,6 +808,8 @@ function renderMediaState() {
   const start = $('[data-action="joinCall"]', root);
   // Stay in the interview after entering. Turning a camera or microphone off must not arm 進入筆錄 again.
   if (start) start.disabled = busy || !open || connected;
+  const endStaff = $('[data-action="endStaffCall"]', root);
+  if (endStaff) endStaff.disabled = busy || !open || !(connected || (same && session?.hasLocalMedia));
   const stop = $('[data-action="leaveCall"]', root);
   if (stop) stop.disabled = busy || !(connected || state.currentCase.interviewStatus === 'active');
   const retry = $('[data-action="retryMedia"]', root);
@@ -878,6 +889,7 @@ async function openStaffRoom(cases) {
   if (!state.me?.user || state.mediaPending) return;
   const live = cases.find((item) => item.status !== 'closed' && item.interviewStatus === 'active');
   if (!live) return;
+  if (String(state.staffHoldCallId) === String(live.id)) return;
   const session = state.videoSession;
   const sameLive = session && String(session.caseId) === String(live.id);
   // A camera or microphone toggle must not make the poll rebuild the admin page or drop the call.
@@ -895,6 +907,7 @@ async function openStaffRoom(cases) {
 
 async function joinCall(caseId, markStatement = false, _unused = false, root = state.callRoot) {
   requireOpenRoot(caseId, root);
+  if (String(state.staffHoldCallId) === String(caseId)) state.staffHoldCallId = null;
   const session = getVideoSession();
   await session.connect(caseId, root);
   let mediaFailure;

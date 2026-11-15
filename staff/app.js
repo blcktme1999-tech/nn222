@@ -388,7 +388,7 @@ function selectCase(root, caseItem, isAdmin = false) {
 
 async function selectCaseNow(root, caseItem, isAdmin = false) {
   if (!root?.isConnected) return false;
-  if (state.currentCase?.id === caseItem.id && state.detailRoot === root) {
+  if (String(state.currentCase?.id) === String(caseItem.id) && (state.detailRoot === root || (state.videoSession?.connected && String(state.videoSession.caseId) === String(caseItem.id)))) {
     await applySelectedCase(caseItem);
     return true;
   }
@@ -797,7 +797,8 @@ function renderMediaState() {
     if (button) { button.textContent = `${enabled ? '關閉' : '開啟'}${label}`; button.setAttribute('aria-pressed', String(enabled)); button.disabled = busy || !open; }
   }
   const start = $('[data-action="joinCall"]', root);
-  if (start) start.disabled = busy || !open || Boolean(connected && session.tracks.has('video') && session.tracks.has('audio'));
+  // Stay in the interview after entering. Turning a camera or microphone off must not arm 進入筆錄 again.
+  if (start) start.disabled = busy || !open || connected;
   const stop = $('[data-action="leaveCall"]', root);
   if (stop) stop.disabled = busy || !(connected || state.currentCase.interviewStatus === 'active');
   const retry = $('[data-action="retryMedia"]', root);
@@ -877,14 +878,17 @@ async function openStaffRoom(cases) {
   if (!state.me?.user || state.mediaPending) return;
   const live = cases.find((item) => item.status !== 'closed' && item.interviewStatus === 'active');
   if (!live) return;
-  if (state.videoSession?.hasLocalMedia && state.videoSession.caseId && state.videoSession.caseId !== live.id) return;
+  const session = state.videoSession;
+  const sameLive = session && String(session.caseId) === String(live.id);
+  // A camera or microphone toggle must not make the poll rebuild the admin page or drop the call.
+  if (sameLive && (session.connected || session.hasLocalMedia || ['connecting', 'reconnecting', 'disconnecting'].includes(session.status))) return;
   const root = state.me.user.role === 'admin' ? $('#adminWorkspace') : $('#staffWorkspace');
   if (!root?.isConnected) return;
-  if (state.currentCase?.id !== live.id || state.detailRoot !== root) {
+  if (String(state.currentCase?.id) !== String(live.id) || state.detailRoot !== root) {
     const opened = await selectCaseNow(root, live, state.me.user.role === 'admin');
     if (!opened) return;
   }
-  if (state.videoSession?.connected && state.videoSession.caseId === live.id) return;
+  if (state.videoSession?.connected && String(state.videoSession.caseId) === String(live.id)) return;
   try { await watchCall(live.id, state.callRoot); }
   catch (error) { showMediaError(error); }
 }
